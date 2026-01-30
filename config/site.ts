@@ -2,7 +2,8 @@ export type SiteConfig = typeof siteConfig;
 
 export const siteConfig = {
   name: "WashLap Laundry",
-  description: "Sistem manajemen laundry dengan dashboard admin dan kurir. Kelola pesanan, penjemputan, dan pengantaran dengan mudah.",
+  description:
+    "Sistem manajemen laundry dengan dashboard admin dan kurir. Kelola pesanan, penjemputan, dan pengantaran dengan mudah.",
   navItems: [
     {
       label: "Home",
