@@ -8,6 +8,7 @@ import {
   supabaseUrl,
   supabaseServiceKey,
 } from "@/utils/supabase/server";
+import { getSiteUrl } from "@/utils/get-url";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
       console.error("Missing Supabase URL or Service Key");
 
       return NextResponse.redirect(
-        `${origin}/login?error=server_configuration_error`,
+        `${getSiteUrl()}login?error=server_configuration_error`,
       );
     }
 
@@ -88,7 +89,7 @@ export async function GET(request: NextRequest) {
 
           // 3. Redirect dengan pesan error yang jelas
           return NextResponse.redirect(
-            `${origin}/login?error=email_not_registered`,
+            `${getSiteUrl()}login?error=email_not_registered`,
           );
         }
 
@@ -99,11 +100,11 @@ export async function GET(request: NextRequest) {
         console.error("[AUTH] Error verifying user:", err);
         await supabase.auth.signOut();
 
-        return NextResponse.redirect(`${origin}/login?error=server_error`);
+        return NextResponse.redirect(`${getSiteUrl()}login?error=server_error`);
       }
 
       // User valid, redirect ke /admin
-      const response = NextResponse.redirect(`${origin}${next}`);
+      const response = NextResponse.redirect(`${getSiteUrl()}${next.startsWith('/') ? next.slice(1) : next}`);
 
       // Set Manual Cookies for existing middleware compatibility
       response.cookies.set("sb-access-token", data.session.access_token, {
@@ -127,5 +128,5 @@ export async function GET(request: NextRequest) {
   }
 
   // Return to login if error
-  return NextResponse.redirect(`${origin}/login?error=auth_code_error`);
+  return NextResponse.redirect(`${getSiteUrl()}login?error=auth_code_error`);
 }
