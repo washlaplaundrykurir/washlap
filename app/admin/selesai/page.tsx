@@ -6,6 +6,14 @@ import { Spinner } from "@heroui/spinner";
 import { Tabs, Tab } from "@heroui/tabs";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  useDisclosure,
+} from "@heroui/modal";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -16,6 +24,7 @@ import {
   Check,
   FileText,
   Sparkles,
+  RotateCcw,
 } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
@@ -36,6 +45,196 @@ interface Order {
   status_ref: { id: number; nama_status: string } | null;
 }
 
+const PendingCard = ({
+  order,
+  notaInputs,
+  setNotaInputs,
+  actionLoading,
+  confirmOrder,
+  revertOrder,
+  formatDate,
+}: {
+  order: Order;
+  notaInputs: Record<string, string>;
+  setNotaInputs: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  actionLoading: string | null;
+  confirmOrder: (orderId: string, hasExistingNota: boolean) => void;
+  revertOrder: (orderId: string, customerId: string) => void;
+  formatDate: (date: string) => string;
+}) => (
+  <Card className="backdrop-blur-xl bg-yellow-50/60 dark:bg-yellow-500/10 border border-yellow-300/50 dark:border-yellow-500/30">
+    <CardBody className="p-4">
+      <div className="flex flex-col gap-3">
+        <div className="flex justify-between items-start">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-bold text-gray-900 dark:text-white">
+              {order.nomor_tiket}
+            </span>
+            <Chip color="warning" size="sm">
+              {order.status_ref?.nama_status || "Menunggu Konfirmasi"}
+            </Chip>
+            <Chip
+              color={order.jenis_tugas === "JEMPUT" ? "secondary" : "primary"}
+              size="sm"
+              variant="flat"
+            >
+              {order.jenis_tugas}
+            </Chip>
+          </div>
+          <p className="text-xs text-gray-400">
+            {formatDate(order.waktu_order)}
+          </p>
+        </div>
+
+        <div className="text-sm">
+          <p className="text-gray-600 dark:text-white/70 flex items-center gap-1">
+            <User size={14} /> {order.customers?.nama_terakhir || "-"} •{" "}
+            {order.customers?.nomor_hp}
+          </p>
+          <p className="text-gray-500 dark:text-white/50 flex items-center gap-1">
+            <MapPin size={14} /> {order.alamat_jalan}
+          </p>
+          <p className="text-gray-500 dark:text-white/50 flex items-center gap-1">
+            <Truck size={14} /> Kurir:{" "}
+            {order.auth_users?.full_name || order.auth_users?.email || "-"}
+          </p>
+        </div>
+
+        {/* Action Section - Different for JEMPUT vs ANTAR */}
+        <div className="flex gap-2 items-center pt-2 border-t border-yellow-200 dark:border-yellow-500/20">
+          {order.jenis_tugas === "JEMPUT" ? (
+            /* JEMPUT: Need to input nota */
+            <>
+              <Input
+                className="flex-1"
+                placeholder="Masukkan nomor nota"
+                size="sm"
+                value={notaInputs[order.id] || ""}
+                variant="flat"
+                onValueChange={(v) =>
+                  setNotaInputs((prev) => ({ ...prev, [order.id]: v }))
+                }
+              />
+              <Button
+                isIconOnly
+                color="warning"
+                isLoading={actionLoading === order.id}
+                size="sm"
+                title="Kembalikan ke Ditugaskan"
+                variant="flat"
+                onClick={() =>
+                  order.customers?.id &&
+                  revertOrder(order.id, order.customers.id)
+                }
+              >
+                <RotateCcw size={16} />
+              </Button>
+              <Button
+                color="success"
+                isLoading={actionLoading === order.id}
+                size="sm"
+                onClick={() => confirmOrder(order.id, false)}
+              >
+                <Check size={16} /> Selesai
+              </Button>
+            </>
+          ) : (
+            /* ANTAR: Nota sudah diisi saat assign, tinggal konfirmasi */
+            <>
+              {order.nomor_nota && (
+                <span className="text-sm text-gray-600 dark:text-white/70 flex-1 flex items-center gap-1">
+                  <FileText size={14} /> Nota:{" "}
+                  <strong>{order.nomor_nota}</strong>
+                </span>
+              )}
+              <Button
+                isIconOnly
+                color="warning"
+                isLoading={actionLoading === order.id}
+                size="sm"
+                title="Kembalikan ke Ditugaskan"
+                variant="flat"
+                onClick={() =>
+                  order.customers?.id &&
+                  revertOrder(order.id, order.customers.id)
+                }
+              >
+                <RotateCcw size={16} />
+              </Button>
+              <Button
+                color="success"
+                isLoading={actionLoading === order.id}
+                size="sm"
+                onClick={() => confirmOrder(order.id, !!order.nomor_nota)}
+              >
+                <Check size={16} /> Selesai
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+    </CardBody>
+  </Card>
+);
+
+const CompletedCard = ({
+  order,
+  formatDate,
+}: {
+  order: Order;
+  formatDate: (date: string) => string;
+}) => (
+  <Card className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">
+    <CardBody className="p-4">
+      <div className="flex justify-between items-start mb-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-bold text-gray-900 dark:text-white">
+            {order.nomor_tiket}
+          </span>
+          <Chip color="success" size="sm">
+            Selesai
+          </Chip>
+          <Chip
+            color={order.jenis_tugas === "JEMPUT" ? "secondary" : "primary"}
+            size="sm"
+            variant="flat"
+          >
+            {order.jenis_tugas}
+          </Chip>
+          {order.nomor_nota && (
+            <Chip color="default" size="sm" variant="bordered">
+              <FileText className="inline mr-1" size={12} /> {order.nomor_nota}
+            </Chip>
+          )}
+        </div>
+        <p className="text-xs text-gray-400">
+          {formatDate(order.waktu_selesai || order.waktu_order)}
+        </p>
+      </div>
+      <p className="text-sm text-gray-600 dark:text-white/70 mb-1 flex items-center gap-1">
+        <User size={14} /> {order.customers?.nama_terakhir || "-"} •{" "}
+        {order.customers?.nomor_hp}
+      </p>
+      <p className="text-sm text-gray-500 dark:text-white/50 mb-1 flex items-center gap-1">
+        <MapPin size={14} /> {order.alamat_jalan}
+      </p>
+      <p className="text-sm text-gray-500 dark:text-white/50 flex items-center gap-1">
+        <Truck size={14} /> Kurir:{" "}
+        {order.auth_users?.full_name || order.auth_users?.email || "-"}
+      </p>
+      {order.google_maps_link && (
+        <Link
+          className="text-xs text-primary hover:underline mt-1 inline-block"
+          href={order.google_maps_link}
+          target="_blank"
+        >
+          Buka Maps →
+        </Link>
+      )}
+    </CardBody>
+  </Card>
+);
+
 export default function SelesaiPage() {
   const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
   const [completedOrders, setCompletedOrders] = useState<Order[]>([]);
@@ -44,6 +243,13 @@ export default function SelesaiPage() {
   const [notaInputs, setNotaInputs] = useState<Record<string, string>>({});
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const { showToast } = useToast();
+
+  // Revert Modal State
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const [revertTarget, setRevertTarget] = useState<{
+    id: string;
+    customerId: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchAllOrders();
@@ -112,6 +318,44 @@ export default function SelesaiPage() {
     }
   };
 
+  const initiateRevert = (orderId: string, customerId: string) => {
+    setRevertTarget({ id: orderId, customerId });
+    onOpen();
+  };
+
+  const executeRevert = async () => {
+    if (!revertTarget) return;
+
+    try {
+      setActionLoading(revertTarget.id);
+      const response = await fetch("/api/orders/update", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: revertTarget.id,
+          customerId: revertTarget.customerId,
+          statusId: 2, // Revert to Ditugaskan
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) throw new Error(result.error);
+
+      showToast("success", "Status berhasil dikembalikan ke Ditugaskan");
+      fetchAllOrders();
+      onOpenChange(); // Close modal
+    } catch (err) {
+      showToast(
+        "error",
+        err instanceof Error ? err.message : "Gagal mengupdate status",
+      );
+    } finally {
+      setActionLoading(null);
+      setRevertTarget(null);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     if (!dateString) return "-";
 
@@ -123,147 +367,6 @@ export default function SelesaiPage() {
       minute: "2-digit",
     });
   };
-
-  const PendingCard = ({ order }: { order: Order }) => (
-    <Card className="backdrop-blur-xl bg-yellow-50/60 dark:bg-yellow-500/10 border border-yellow-300/50 dark:border-yellow-500/30">
-      <CardBody className="p-4">
-        <div className="flex flex-col gap-3">
-          <div className="flex justify-between items-start">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-bold text-gray-900 dark:text-white">
-                {order.nomor_tiket}
-              </span>
-              <Chip color="warning" size="sm">
-                {order.status_ref?.nama_status || "Menunggu Konfirmasi"}
-              </Chip>
-              <Chip
-                color={order.jenis_tugas === "JEMPUT" ? "secondary" : "primary"}
-                size="sm"
-                variant="flat"
-              >
-                {order.jenis_tugas}
-              </Chip>
-            </div>
-            <p className="text-xs text-gray-400">
-              {formatDate(order.waktu_order)}
-            </p>
-          </div>
-
-          <div className="text-sm">
-            <p className="text-gray-600 dark:text-white/70 flex items-center gap-1">
-              <User size={14} /> {order.customers?.nama_terakhir || "-"} •{" "}
-              {order.customers?.nomor_hp}
-            </p>
-            <p className="text-gray-500 dark:text-white/50 flex items-center gap-1">
-              <MapPin size={14} /> {order.alamat_jalan}
-            </p>
-            <p className="text-gray-500 dark:text-white/50 flex items-center gap-1">
-              <Truck size={14} /> Kurir:{" "}
-              {order.auth_users?.full_name || order.auth_users?.email || "-"}
-            </p>
-          </div>
-
-          {/* Action Section - Different for JEMPUT vs ANTAR */}
-          <div className="flex gap-2 items-center pt-2 border-t border-yellow-200 dark:border-yellow-500/20">
-            {order.jenis_tugas === "JEMPUT" ? (
-              /* JEMPUT: Need to input nota */
-              <>
-                <Input
-                  className="flex-1"
-                  placeholder="Masukkan nomor nota"
-                  size="sm"
-                  value={notaInputs[order.id] || ""}
-                  variant="flat"
-                  onValueChange={(v) =>
-                    setNotaInputs((prev) => ({ ...prev, [order.id]: v }))
-                  }
-                />
-                <Button
-                  color="success"
-                  isLoading={actionLoading === order.id}
-                  size="sm"
-                  onClick={() => confirmOrder(order.id, false)}
-                >
-                  <Check size={16} /> Selesai
-                </Button>
-              </>
-            ) : (
-              /* ANTAR: Nota sudah diisi saat assign, tinggal konfirmasi */
-              <>
-                {order.nomor_nota && (
-                  <span className="text-sm text-gray-600 dark:text-white/70 flex-1 flex items-center gap-1">
-                    <FileText size={14} /> Nota:{" "}
-                    <strong>{order.nomor_nota}</strong>
-                  </span>
-                )}
-                <Button
-                  color="success"
-                  isLoading={actionLoading === order.id}
-                  size="sm"
-                  onClick={() => confirmOrder(order.id, !!order.nomor_nota)}
-                >
-                  <Check size={16} /> Selesai
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-      </CardBody>
-    </Card>
-  );
-
-  const CompletedCard = ({ order }: { order: Order }) => (
-    <Card className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">
-      <CardBody className="p-4">
-        <div className="flex justify-between items-start mb-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-gray-900 dark:text-white">
-              {order.nomor_tiket}
-            </span>
-            <Chip color="success" size="sm">
-              Selesai
-            </Chip>
-            <Chip
-              color={order.jenis_tugas === "JEMPUT" ? "secondary" : "primary"}
-              size="sm"
-              variant="flat"
-            >
-              {order.jenis_tugas}
-            </Chip>
-            {order.nomor_nota && (
-              <Chip color="default" size="sm" variant="bordered">
-                <FileText className="inline mr-1" size={12} />{" "}
-                {order.nomor_nota}
-              </Chip>
-            )}
-          </div>
-          <p className="text-xs text-gray-400">
-            {formatDate(order.waktu_selesai || order.waktu_order)}
-          </p>
-        </div>
-        <p className="text-sm text-gray-600 dark:text-white/70 mb-1 flex items-center gap-1">
-          <User size={14} /> {order.customers?.nama_terakhir || "-"} •{" "}
-          {order.customers?.nomor_hp}
-        </p>
-        <p className="text-sm text-gray-500 dark:text-white/50 mb-1 flex items-center gap-1">
-          <MapPin size={14} /> {order.alamat_jalan}
-        </p>
-        <p className="text-sm text-gray-500 dark:text-white/50 flex items-center gap-1">
-          <Truck size={14} /> Kurir:{" "}
-          {order.auth_users?.full_name || order.auth_users?.email || "-"}
-        </p>
-        {order.google_maps_link && (
-          <Link
-            className="text-xs text-primary hover:underline mt-1 inline-block"
-            href={order.google_maps_link}
-            target="_blank"
-          >
-            Buka Maps →
-          </Link>
-        )}
-      </CardBody>
-    </Card>
-  );
 
   return (
     <>
@@ -322,7 +425,16 @@ export default function SelesaiPage() {
                 </Card>
               ) : (
                 pendingOrders.map((order) => (
-                  <PendingCard key={order.id} order={order} />
+                  <PendingCard
+                    key={order.id}
+                    actionLoading={actionLoading}
+                    confirmOrder={confirmOrder}
+                    formatDate={formatDate}
+                    notaInputs={notaInputs}
+                    order={order}
+                    revertOrder={initiateRevert}
+                    setNotaInputs={setNotaInputs}
+                  />
                 ))
               )}
             </div>
@@ -338,13 +450,49 @@ export default function SelesaiPage() {
                 </Card>
               ) : (
                 completedOrders.map((order) => (
-                  <CompletedCard key={order.id} order={order} />
+                  <CompletedCard
+                    key={order.id}
+                    formatDate={formatDate}
+                    order={order}
+                  />
                 ))
               )}
             </div>
           </Tab>
         </Tabs>
       )}
+
+      {/* Confirmation Modal */}
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                Konfirmasi Pengembalian
+              </ModalHeader>
+              <ModalBody>
+                <p>
+                  Apakah Anda yakin ingin mengembalikan status order ini ke{" "}
+                  <b>Ditugaskan</b>?
+                </p>
+                <p className="text-sm text-gray-500">
+                  Tindakan ini akan membatalkan status &quot;Sudah
+                  Jemput/Antar&quot; dan mengembalikan order ini ke antrian
+                  tugas kurir.
+                </p>
+              </ModalBody>
+              <ModalFooter>
+                <Button color="danger" variant="light" onPress={onClose}>
+                  Batal
+                </Button>
+                <Button color="primary" onPress={executeRevert}>
+                  Ya, Kembalikan
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </>
   );
 }

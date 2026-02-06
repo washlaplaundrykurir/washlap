@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
       produkLayananManual,
       jenisLayanan,
       parfum,
+      catatan,
     } = body;
 
     // 1. Upsert customer (based on nomor_hp)
@@ -77,6 +78,12 @@ export async function POST(request: NextRequest) {
     for (const type of jenisTugasArray) {
       const nomorTiket = generateTicket(type, nama);
 
+      let catatanKhusus = `Produk: ${produkLayanan === "lainnya" ? produkLayananManual : produkLayanan}, Jenis: ${jenisLayanan}, Parfum: ${parfum}`;
+
+      if (catatan && catatan.trim() !== "") {
+        catatanKhusus += ` | Catatan: ${catatan}`;
+      }
+
       const { data: permintaanData, error: permintaanError } = await supabase
         .from("permintaan")
         .insert({
@@ -90,7 +97,7 @@ export async function POST(request: NextRequest) {
           waktu_penjemputan: waktuPenjemputan
             ? new Date(waktuPenjemputan).toISOString()
             : null,
-          catatan_khusus: `Produk: ${produkLayanan === "lainnya" ? produkLayananManual : produkLayanan}, Jenis: ${jenisLayanan}, Parfum: ${parfum}`,
+          catatan_khusus: catatanKhusus,
         })
         .select("id")
         .single();

@@ -1,11 +1,23 @@
 /* eslint-disable no-console */
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
-import { createSupabaseAdmin } from "@/utils/supabase/server";
+import { createSupabaseAdmin, createClient } from "@/utils/supabase/server";
 
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = createSupabaseAdmin();
+    const supabaseAdmin = createSupabaseAdmin();
+    const cookieStore = await cookies();
+    const supabaseAuth = createClient(cookieStore);
+
+    const accessToken = cookieStore.get("sb-access-token")?.value;
+
+    const {
+      data: { user },
+    } = await supabaseAuth.auth.getUser(accessToken);
+
+    console.log("Update Order - Auth User:", user?.id, user?.email);
+
     const {
       orderId,
       customerId,
@@ -30,7 +42,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // 1. Update Customer
-    const { error: customerError } = await supabase
+    const { error: customerError } = await supabaseAdmin
       .from("customers")
       .update({
         nama_terakhir: nama,
@@ -52,6 +64,13 @@ export async function PUT(request: NextRequest) {
         updatePermintaanData.waktu_assigned = new Date().toISOString();
       if (statusId === 6)
         updatePermintaanData.waktu_selesai = new Date().toISOString();
+
+      // Log status change
+      await supabaseAdmin.from("status_logs").insert({
+        permintaan_id: orderId,
+        status_id_baru: statusId,
+        changed_by: user?.id || null, // Track who changed it
+      });
     }
 
     if (courierId !== undefined) updatePermintaanData.courier_id = courierId;
@@ -63,15 +82,14 @@ export async function PUT(request: NextRequest) {
       ).toISOString();
     }
 
-    const { error: orderError } = await supabase
+    const { error: orderError } = await supabaseAdmin
       .from("permintaan")
       .update(updatePermintaanData)
       .eq("id", orderId);
 
     if (orderError) throw orderError;
 
-    // 3. Update Order Items (Assuming 1-to-1 relationship for now as per create logic)
-    // We update based on permintaan_id
+    // 3. Update Order Items (Assuming 1-to-1 relationship)
     if (produk || layanan || parfum) {
       const updates: any = {};
 
@@ -79,7 +97,7 @@ export async function PUT(request: NextRequest) {
       if (layanan) updates.jenis_layanan = layanan;
       if (parfum) updates.parfum = parfum;
 
-      const { error: itemError } = await supabase
+      const { error: itemError } = await supabaseAdmin
         .from("order_items")
         .update(updates)
         .eq("permintaan_id", orderId);

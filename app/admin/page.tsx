@@ -3,7 +3,6 @@
 import { Card, CardBody } from "@heroui/card";
 import { Button } from "@heroui/button";
 import { Input, Textarea } from "@heroui/input";
-import { RadioGroup, Radio } from "@heroui/radio";
 import { CheckboxGroup, Checkbox } from "@heroui/checkbox";
 import { DatePicker } from "@heroui/date-picker";
 import { Divider } from "@heroui/divider";
@@ -16,9 +15,13 @@ import {
   useDisclosure,
 } from "@heroui/modal";
 import { useState, useEffect } from "react";
-import { CalendarDateTime } from "@internationalized/date";
+import {
+  CalendarDateTime,
+  today,
+  getLocalTimeZone,
+} from "@internationalized/date";
 import { I18nProvider } from "@react-aria/i18n";
-import { ClipboardList, Truck, Package, Plus } from "lucide-react";
+import { ClipboardList, Truck, Package, Plus, Megaphone } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
 
@@ -54,6 +57,7 @@ export default function AdminPage() {
     produkLayananManual: "",
     jenisLayanan: "",
     parfum: "",
+    catatan: "",
   });
 
   useEffect(() => {
@@ -139,17 +143,28 @@ export default function AdminPage() {
   };
 
   const resetForm = () => {
+    // Default to now
+    const now = new Date();
+    const nowDt = new CalendarDateTime(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      now.getDate(),
+      now.getHours(),
+      now.getMinutes(),
+    );
+
     setFormData({
       nama: "",
       nomorHP: "",
       alamat: "",
       googleMapsLink: "",
       permintaan: [],
-      waktuPenjemputan: null,
+      waktuPenjemputan: nowDt,
       produkLayanan: "",
       produkLayananManual: "",
       jenisLayanan: "",
       parfum: "",
+      catatan: "",
     });
     setSubmitStatus({ type: null, message: "" });
   };
@@ -161,6 +176,15 @@ export default function AdminPage() {
       "Dedi Prasetyo",
       "Siti Rahayu",
       "Eko Susanto",
+      "Rina Kartika",
+      "Joko Widodo",
+      "Megawati Putri",
+      "Ahmad Dhani",
+      "Luna Maya",
+      "Raffi Ahmad",
+      "Nagita Slavina",
+      "Deddy Corbuzier",
+      "Raisa Andriana",
     ];
     const addresses = [
       "Jl. Merdeka No. 45, Surabaya",
@@ -168,22 +192,58 @@ export default function AdminPage() {
       "Jl. Sudirman No. 78, Bandung",
       "Jl. Ahmad Yani No. 23, Semarang",
       "Jl. Diponegoro No. 99, Yogyakarta",
+      "Perumahan Griya Indah Blok A1 No. 5",
+      "Apartemen Sejahtera Lt. 12 Unit 5B",
+      "Jl. Malioboro No. 1, Yogyakarta",
+      "Jl. Pahlawan No. 10, Malang",
+      "Komplek Setiabudi Regency No. 88",
     ];
+    const notes = [
+      "",
+      "Pakaian mudah luntur, mohon dipisah",
+      "Noda minyak di kemeja putih",
+      "Tolong dilipat rapi",
+      "Jangan pakai pewangi terlalu banyak",
+      "Antar sore ya",
+      "Hubungi satpam jika tidak ada orang",
+      "Baju bayi, gunakan deterjen khusus jika ada",
+      "",
+    ];
+
     const randomName = names[Math.floor(Math.random() * names.length)];
     const randomAddress =
       addresses[Math.floor(Math.random() * addresses.length)];
     const randomPhone = `08${Math.floor(Math.random() * 9000000000 + 1000000000)}`;
+    const randomNote = notes[Math.floor(Math.random() * notes.length)];
 
-    // Tomorrow at 14:00
-    const tomorrow = new Date();
+    const products = ["cuci-setrika", "cuci-lipat", "setrika-saja", "lainnya"];
+    const randomProduct = products[Math.floor(Math.random() * products.length)];
+    const randomProductManual =
+      randomProduct === "lainnya" ? "Cuci Karpet" : "";
 
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowDt = new CalendarDateTime(
-      tomorrow.getFullYear(),
-      tomorrow.getMonth() + 1,
-      tomorrow.getDate(),
-      14,
+    const services = ["reguler", "express"];
+    const randomService = services[Math.floor(Math.random() * services.length)];
+
+    const perfumes = ["soft", "strong", "tanpa-parfum"];
+    const randomPerfume = perfumes[Math.floor(Math.random() * perfumes.length)];
+
+    // Random date within next 3 days
+    const date = new Date();
+
+    date.setDate(date.getDate() + Math.floor(Math.random() * 3));
+    date.setHours(
+      8 + Math.floor(Math.random() * 9),
+      Math.floor(Math.random() * 4) * 15,
       0,
+      0,
+    );
+
+    const timeDto = new CalendarDateTime(
+      date.getFullYear(),
+      date.getMonth() + 1,
+      date.getDate(),
+      date.getHours(),
+      date.getMinutes(),
     );
 
     setFormData({
@@ -191,14 +251,18 @@ export default function AdminPage() {
       nomorHP: randomPhone,
       alamat: randomAddress,
       googleMapsLink: "https://maps.google.com/?q=-7.2575,112.7521",
-      permintaan: Math.random() > 0.5 ? ["jemput", "antar"] : ["jemput"],
-      waktuPenjemputan: tomorrowDt,
-      produkLayanan: ["cuci-setrika", "cuci-saja", "setrika-saja"][
-        Math.floor(Math.random() * 3)
-      ],
-      produkLayananManual: "",
-      jenisLayanan: Math.random() > 0.3 ? "reguler" : "express",
-      parfum: ["soft", "strong", "tanpa-parfum"][Math.floor(Math.random() * 3)],
+      permintaan:
+        Math.random() > 0.5
+          ? ["jemput", "antar"]
+          : Math.random() > 0.5
+            ? ["jemput"]
+            : ["antar"],
+      waktuPenjemputan: timeDto,
+      produkLayanan: randomProduct,
+      produkLayananManual: randomProductManual,
+      jenisLayanan: randomService,
+      parfum: randomPerfume,
+      catatan: randomNote,
     });
   };
 
@@ -303,6 +367,12 @@ export default function AdminPage() {
                 <p className="text-xs pt-1">Belum Ditugaskan</p>
               </div>
             </Button>
+            <Button as="a" className="h-20" href="/admin/promo" variant="flat">
+              <div className="flex flex-col items-center justify-center">
+                <Megaphone className="w-8 h-8 mb-1" />
+                <p className="text-xs pt-1">Kelola Promo</p>
+              </div>
+            </Button>
           </div>
         </CardBody>
       </Card>
@@ -365,6 +435,7 @@ export default function AdminPage() {
                   granularity="minute"
                   hourCycle={24}
                   label="Waktu Penjemputan"
+                  minValue={today(getLocalTimeZone())}
                   value={formData.waktuPenjemputan}
                   onChange={(v) =>
                     setFormData((prev) => ({
@@ -377,6 +448,7 @@ export default function AdminPage() {
 
               <Divider />
 
+              {/* Hidden fields as per admin request
               <RadioGroup
                 isRequired
                 label="Produk Layanan"
@@ -419,6 +491,14 @@ export default function AdminPage() {
                 <Radio value="strong">Strong</Radio>
                 <Radio value="tanpa-parfum">Tanpa Parfum</Radio>
               </RadioGroup>
+              */}
+
+              <Textarea
+                label="Catatan Tambahan"
+                placeholder="Tambahkan catatan khusus jika ada"
+                value={formData.catatan}
+                onValueChange={(v) => handleInputChange("catatan", v)}
+              />
             </div>
           </ModalBody>
           <ModalFooter>

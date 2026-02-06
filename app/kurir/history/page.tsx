@@ -3,6 +3,7 @@
 import { Card, CardBody } from "@heroui/card";
 import { Chip } from "@heroui/chip";
 import { Spinner } from "@heroui/spinner";
+import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -52,14 +53,31 @@ export default function KurirHistoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Default filter: last 7 days
+  const today = new Date();
+  const sevenDaysAgo = new Date();
+
+  sevenDaysAgo.setDate(today.getDate() - 7);
+
+  const [startDate, setStartDate] = useState(
+    sevenDaysAgo.toISOString().split("T")[0],
+  );
+  const [endDate, setEndDate] = useState(today.toISOString().split("T")[0]);
+
   useEffect(() => {
     fetchHistory();
-  }, []);
+  }, [startDate, endDate]); // Refetch when dates change
 
   const fetchHistory = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/kurir/tasks?status=completed");
+      const params = new URLSearchParams({
+        status: "completed",
+        startDate,
+        endDate,
+      });
+
+      const response = await fetch(`/api/kurir/tasks?${params}`);
       const result = await response.json();
 
       if (!response.ok) {
@@ -87,7 +105,7 @@ export default function KurirHistoryPage() {
   return (
     <div className="max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <History className="w-6 h-6" /> Riwayat Tugas
@@ -96,9 +114,34 @@ export default function KurirHistoryPage() {
             Total: {orders.length} tugas selesai
           </p>
         </div>
-        <Button as={Link} href="/kurir" size="sm" variant="flat">
-          <ArrowLeft size={16} /> Kembali
-        </Button>
+
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+          <Input
+            className="w-full sm:w-36"
+            label="Dari"
+            size="sm"
+            type="date"
+            value={startDate}
+            onValueChange={setStartDate}
+          />
+          <Input
+            className="w-full sm:w-36"
+            label="Sampai"
+            size="sm"
+            type="date"
+            value={endDate}
+            onValueChange={setEndDate}
+          />
+          <Button
+            as={Link}
+            className="h-full min-h-[48px] sm:min-h-[40px]"
+            href="/kurir"
+            size="lg"
+            variant="flat"
+          >
+            <ArrowLeft size={16} />
+          </Button>
+        </div>
       </div>
 
       {/* Loading State */}

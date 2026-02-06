@@ -39,7 +39,9 @@ export async function GET(request: NextRequest) {
 
     const supabase = createSupabaseAdmin();
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status"); // 'pending', 'completed', 'all'
+    const status = searchParams.get("status");
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
 
     // Build query for orders assigned to this courier
     let query = supabase
@@ -76,9 +78,22 @@ export async function GET(request: NextRequest) {
 
     // Filter by status
     if (status === "pending") {
-      query = query.eq("status_id", 2); // Status 2 = Ditugaskan (tugas aktif)
+      query = query.eq("status_id", 2);
     } else if (status === "completed") {
-      query = query.in("status_id", [3, 5, 6, 7]); // Sudah Jemput, Sudah Antar, Selesai, Batal
+      query = query.in("status_id", [3, 5, 6, 7]);
+    }
+
+    // Filter by Date
+    if (startDate) {
+      query = query.gte("waktu_order", startDate);
+    }
+    if (endDate) {
+      // Add one day to include the end date fully (or handle specific time)
+      // Assuming endDate is YYYY-MM-DD, we want < endDate + 1 day
+      const nextDay = new Date(endDate);
+
+      nextDay.setDate(nextDay.getDate() + 1);
+      query = query.lt("waktu_order", nextDay.toISOString().split("T")[0]);
     }
 
     const { data: orders, error } = await query.order("waktu_order", {
@@ -101,9 +116,17 @@ export async function GET(request: NextRequest) {
     const pendingTasks = orders?.filter((o) => o.status_id < 6).length || 0;
     const completedTasks = orders?.filter((o) => o.status_id >= 6).length || 0;
 
+    // Get courier name
+    const { data: userData } = await supabase
+      .from("auth_users")
+      .select("full_name")
+      .eq("id", userId)
+      .single();
+
     return NextResponse.json({
       success: true,
       data: orders,
+      courierName: userData?.full_name || "Kurir",
       stats: {
         todayTasks,
         pendingTasks,
@@ -190,6 +213,13 @@ export async function PUT(request: NextRequest) {
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
+
+    // Log status change
+    await supabase.from("status_logs").insert({
+      permintaan_id: id,
+      status_id_baru: status_id,
+      changed_by: userId,
+    });
 
     return NextResponse.json({
       success: true,

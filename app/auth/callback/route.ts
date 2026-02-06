@@ -11,7 +11,7 @@ import {
 import { getSiteUrl } from "@/utils/get-url";
 
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   // Default redirect ke /admin setelah login Google
   const next = searchParams.get("next") ?? "/admin";
@@ -104,7 +104,9 @@ export async function GET(request: NextRequest) {
       }
 
       // User valid, redirect ke /admin
-      const response = NextResponse.redirect(`${getSiteUrl()}${next.startsWith('/') ? next.slice(1) : next}`);
+      const response = NextResponse.redirect(
+        `${getSiteUrl()}${next.startsWith("/") ? next.slice(1) : next}`,
+      );
 
       // Set Manual Cookies for existing middleware compatibility
       response.cookies.set("sb-access-token", data.session.access_token, {

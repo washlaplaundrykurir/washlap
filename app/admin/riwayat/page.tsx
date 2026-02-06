@@ -7,6 +7,17 @@ import { Input } from "@heroui/input";
 import { useEffect, useState } from "react";
 import { ScrollText, Search, User, MapPin, Truck } from "lucide-react";
 import Link from "next/link";
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  useDisclosure,
+} from "@heroui/modal";
+import { Button } from "@heroui/button";
+import { Select, SelectItem } from "@heroui/select";
+import { History, RefreshCw } from "lucide-react";
 
 interface Order {
   id: string;
@@ -61,12 +72,42 @@ const statusColors: Record<
   7: "danger", // Batal
 };
 
+const statusLabels: Record<number, string> = {
+  1: "Baru",
+  2: "Ditugaskan",
+  3: "Jemput",
+  4: "Cuci",
+  5: "Antar",
+  6: "Selesai",
+  7: "Batal",
+};
+
+interface StatusLog {
+  id: string;
+  status_id_baru: number;
+  created_at: string;
+  auth_users: {
+    full_name: string;
+    email: string;
+  } | null;
+  status_ref: {
+    nama_status: string;
+  } | null;
+}
+
 export default function RiwayatPage() {
   const [data, setData] = useState<CourierGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  const [totalOrders, setTotalOrders] = useState(0);
+  // const [totalOrders, setTotalOrders] = useState(0); // Unused variable
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  const [selectedLogs, setSelectedLogs] = useState<StatusLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const timelineModal = useDisclosure();
+
+  const [reassignLoading, setReassignLoading] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -82,11 +123,62 @@ export default function RiwayatPage() {
       }
 
       setData(result.data);
-      setTotalOrders(result.totalOrders);
+      // setTotalOrders(result.totalOrders);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Terjadi kesalahan");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchLogs = async (orderId: string) => {
+    setLogsLoading(true);
+    timelineModal.onOpen();
+    try {
+      const response = await fetch(`/api/orders/${orderId}/logs`);
+      const result = await response.json();
+
+      if (response.ok) {
+        setSelectedLogs(result.data);
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to fetch logs", error);
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const handleReassign = async (orderId: string, customerId: string) => {
+    if (
+      !confirm(
+        "Apakah anda yakin ingin menugaskan kembali pesanan ini? Status akan kembali ke 'Ditugaskan'.",
+      )
+    )
+      return;
+
+    setReassignLoading(orderId);
+    try {
+      const response = await fetch("/api/orders/update", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          customerId,
+          statusId: 2, // Back to Assigned
+        }),
+      });
+
+      if (response.ok) {
+        fetchOrders(); // Refresh list
+      } else {
+        alert("Gagal menugaskan kembali");
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("Reassign error", error);
+    } finally {
+      setReassignLoading(null);
     }
   };
 
@@ -100,21 +192,31 @@ export default function RiwayatPage() {
     });
   };
 
-  // Flatten orders and filter by search term
+  const formatTimeOnly = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  // Flatten orders and filter
   const allOrders = data.flatMap((group) =>
     group.orders.map((order) => ({ ...order, courierName: group.courierName })),
   );
 
   const filteredOrders = allOrders.filter((order) => {
     const searchLower = searchTerm.toLowerCase();
-
-    return (
+    const matchesSearch =
       order.nomor_tiket?.toLowerCase().includes(searchLower) ||
       order.customers?.nama_terakhir?.toLowerCase().includes(searchLower) ||
       order.customers?.nomor_hp?.includes(searchTerm) ||
       order.alamat_jalan?.toLowerCase().includes(searchLower) ||
-      order.courierName?.toLowerCase().includes(searchLower)
-    );
+      order.courierName?.toLowerCase().includes(searchLower);
+
+    const matchesStatus =
+      statusFilter === "all" || String(order.status_id) === statusFilter;
+
+    return matchesSearch && matchesStatus;
   });
 
   return (
@@ -126,20 +228,38 @@ export default function RiwayatPage() {
             <ScrollText className="w-6 h-6" /> Riwayat Pesanan
           </h1>
           <p className="text-gray-600 dark:text-white/70">
-            Total: {totalOrders} pesanan
+            Total: {filteredOrders.length} pesanan
           </p>
         </div>
-        <Input
-          className="max-w-xs"
-          classNames={{
-            inputWrapper:
-              "bg-white/60 dark:bg-white/15 backdrop-blur-xl border border-black/10 dark:border-white/30",
-          }}
-          placeholder="Cari tiket, nama, HP, alamat..."
-          startContent={<Search className="text-gray-400" size={16} />}
-          value={searchTerm}
-          onValueChange={setSearchTerm}
-        />
+
+        <div className="flex gap-2 w-full md:w-auto">
+          <Select
+            className="w-40"
+            defaultSelectedKeys={["all"]}
+            placeholder="Filter Status"
+            selectionMode="single"
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            {[
+              <SelectItem key="all">Semua Status</SelectItem>,
+              ...Object.entries(statusLabels).map(([id, label]) => (
+                <SelectItem key={id}>{label}</SelectItem>
+              )),
+            ]}
+          </Select>
+
+          <Input
+            className="w-full md:max-w-xs"
+            classNames={{
+              inputWrapper:
+                "bg-white/60 dark:bg-white/15 backdrop-blur-xl border border-black/10 dark:border-white/30",
+            }}
+            placeholder="Cari tiket, nama, HP..."
+            startContent={<Search className="text-gray-400" size={16} />}
+            value={searchTerm}
+            onValueChange={setSearchTerm}
+          />
+        </div>
       </div>
 
       {/* Loading State */}
@@ -158,7 +278,7 @@ export default function RiwayatPage() {
         </Card>
       )}
 
-      {/* Orders List (Read-only) */}
+      {/* Orders List */}
       {!isLoading && !error && (
         <div className="space-y-3">
           {filteredOrders.length === 0 ? (
@@ -221,14 +341,39 @@ export default function RiwayatPage() {
                         </Link>
                       )}
                     </div>
-                    <div className="text-right text-sm text-gray-400 dark:text-white/40 min-w-[120px]">
-                      <p>{formatDate(order.waktu_order)}</p>
-                      {order.order_items?.[0] && (
-                        <div className="mt-2 text-xs">
-                          <p>Produk: {order.order_items[0].produk_layanan}</p>
-                          <p>Layanan: {order.order_items[0].jenis_layanan}</p>
-                        </div>
-                      )}
+
+                    <div className="flex flex-col justify-between items-end gap-2">
+                      <div className="text-right text-sm text-gray-400 dark:text-white/40">
+                        <p>{formatDate(order.waktu_order)}</p>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          startContent={<History size={14} />}
+                          variant="flat"
+                          onPress={() => fetchLogs(order.id)}
+                        >
+                          Timeline
+                        </Button>
+
+                        {/* Allow Re-assign if status is > 2 (Ditugaskan) and < 6 (Selesai) */}
+                        {order.status_id > 2 && order.status_id < 6 && (
+                          <Button
+                            color="warning"
+                            isLoading={reassignLoading === order.id}
+                            size="sm"
+                            startContent={<RefreshCw size={14} />}
+                            variant="flat"
+                            onPress={() =>
+                              order.customers?.id &&
+                              handleReassign(order.id, order.customers.id)
+                            }
+                          >
+                            Tugaskan Lagi
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardBody>
@@ -237,6 +382,62 @@ export default function RiwayatPage() {
           )}
         </div>
       )}
+
+      {/* Timeline Modal */}
+      <Modal
+        isOpen={timelineModal.isOpen}
+        scrollBehavior="inside"
+        onClose={timelineModal.onClose}
+      >
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            Timeline Pesanan
+          </ModalHeader>
+          <ModalBody>
+            {logsLoading ? (
+              <div className="flex justify-center p-4">
+                <Spinner />
+              </div>
+            ) : selectedLogs.length === 0 ? (
+              <p className="text-center text-gray-500">
+                Belum ada riwayat aktivitas.
+              </p>
+            ) : (
+              <div className="relative space-y-6 my-4">
+                {/* Vertical Line */}
+                <div className="absolute left-[7px] top-2 bottom-2 w-[2px] bg-gray-200 dark:bg-gray-700 pointer-events-none" />
+
+                {selectedLogs.map((log) => (
+                  <div key={log.id} className="relative pl-8">
+                    {/* Dot */}
+                    <div className="absolute left-0 top-0.5 w-4 h-4 bg-primary rounded-full border-2 border-white dark:border-gray-800 z-10 shadow-sm" />
+
+                    <div className="flex flex-col">
+                      <span className="text-xs text-gray-500 mb-1">
+                        {formatDate(log.created_at)} •{" "}
+                        {formatTimeOnly(log.created_at)}
+                      </span>
+                      <span className="font-semibold text-gray-800 dark:text-white">
+                        {log.status_ref?.nama_status || "Status Update"}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {log.auth_users?.full_name
+                          ? `Oleh: ${log.auth_users.full_name}`
+                          : "System Update"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button color="primary" onPress={timelineModal.onClose}>
+              Tutup
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </>
   );
 }

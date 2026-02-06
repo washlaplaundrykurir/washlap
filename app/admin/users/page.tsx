@@ -28,6 +28,7 @@ interface User {
 
 const roleOptions = [
   { value: "admin", label: "Admin" },
+  { value: "super-admin", label: "Super Admin" },
   { value: "kurir", label: "Kurir" },
 ];
 
@@ -111,6 +112,7 @@ export default function UsersPage() {
           id: selectedUser.id,
           role: formData.role,
           full_name: formData.full_name,
+          password: formData.password, // Send password if provided
         }),
       });
 
@@ -181,10 +183,14 @@ export default function UsersPage() {
     setError("");
   };
 
-  const roleColor = (role: string): "success" | "primary" | "default" => {
+  const roleColor = (
+    role: string,
+  ): "success" | "primary" | "default" | "secondary" => {
     switch (role) {
       case "admin":
         return "success";
+      case "super-admin":
+        return "secondary";
       case "kurir":
         return "primary";
       default:
@@ -331,7 +337,7 @@ export default function UsersPage() {
           <ModalBody>
             <div className="flex flex-col gap-4">
               <Input
-                label="Nama Lengkap"
+                label="Nama Lengkap (Opsional)"
                 value={formData.full_name}
                 onValueChange={(v) =>
                   setFormData({ ...formData, full_name: v })
@@ -344,7 +350,8 @@ export default function UsersPage() {
                 onValueChange={(v) => setFormData({ ...formData, email: v })}
               />
               <Input
-                label="Password"
+                label="Password (Opsional)"
+                placeholder="Default: 12345678"
                 type="password"
                 value={formData.password}
                 onValueChange={(v) => setFormData({ ...formData, password: v })}
@@ -386,6 +393,18 @@ export default function UsersPage() {
           <ModalBody>
             <div className="flex flex-col gap-4">
               <Input isDisabled label="Email" value={formData.email} />
+
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm text-blue-600 dark:text-blue-300">
+                Isi password hanya jika ingin mereset password user ini.
+              </div>
+              <Input
+                label="Reset Password"
+                placeholder="Masukkan password baru (opsional)"
+                type="password"
+                value={formData.password}
+                onValueChange={(v) => setFormData({ ...formData, password: v })}
+              />
+
               <Input
                 label="Nama Lengkap"
                 value={formData.full_name}

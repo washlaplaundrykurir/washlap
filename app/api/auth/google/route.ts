@@ -6,7 +6,7 @@ import { supabaseUrl, supabaseServiceKey } from "@/utils/supabase/server";
 import { getSiteUrl } from "@/utils/get-url";
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const redirectTo = searchParams.get("redirectTo") || "/admin";
   const cookieStore = await cookies();
 

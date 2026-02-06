@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 import { createSupabaseAdmin } from "@/utils/supabase/server";
 
@@ -28,16 +29,40 @@ export async function PUT(request: NextRequest) {
 
     // Update order: change status to 6 (Selesai)
     // Only confirm orders that are in "Sudah Jemput" (3) or "Sudah Antar" (5) status
-    const { error } = await supabase
+    const cookieStore = await cookies();
+    const accessToken = cookieStore.get("sb-access-token")?.value;
+
+    // Get logged in user
+    const {
+      data: { user },
+    } = await supabase.auth.getUser(accessToken);
+    const userId = user?.id;
+
+    if (!userId) {
+      console.warn("Confirming order without user ID");
+    }
+
+    // Update order: change status to 6 (Selesai)
+    // Only confirm orders that are in "Sudah Jemput" (3) or "Sudah Antar" (5) status
+    const { error: updateError } = await supabase
       .from("permintaan")
       .update(updateData)
       .eq("id", id)
       .in("status_id", [3, 5]); // Only confirm orders that are waiting
 
-    if (error) {
-      console.error("Confirm order error:", error);
+    if (updateError) {
+      console.error("Confirm order error:", updateError);
 
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    }
+
+    // Log status change
+    if (userId) {
+      await supabase.from("status_logs").insert({
+        permintaan_id: id,
+        status_id_baru: 6,
+        changed_by: userId,
+      });
     }
 
     return NextResponse.json({

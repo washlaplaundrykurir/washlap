@@ -68,6 +68,7 @@ export default function KurirPage() {
     completedTasks: 0,
     totalTasks: 0,
   });
+  const [courierName, setCourierName] = useState("Kurir");
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const { showToast } = useToast();
@@ -95,6 +96,7 @@ export default function KurirPage() {
           totalTasks: 0,
         },
       );
+      if (result.courierName) setCourierName(result.courierName);
     } catch (err) {
       showToast(
         "error",
@@ -156,8 +158,6 @@ export default function KurirPage() {
   };
 
   // Check if task can be completed or cancelled
-
-  // Check if task can be completed or cancelled
   const isFinalized = (statusId: number) => statusId >= 6;
 
   return (
@@ -165,7 +165,7 @@ export default function KurirPage() {
       {/* Content */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <Hand className="w-6 h-6 text-yellow-500" /> Halo, Kurir!
+          <Hand className="w-6 h-6 text-yellow-500" /> Halo, {courierName}!
         </h1>
         <p className="text-gray-600 dark:text-white/70">
           Siap untuk mengirim pesanan hari ini?
@@ -291,15 +291,6 @@ export default function KurirPage() {
                       </Link>
                     )}
                   </div>
-
-                  {/* Order Info */}
-                  {order.order_items?.[0] && (
-                    <div className="text-xs text-gray-500 dark:text-white/50">
-                      <Package className="inline mr-1" size={12} />{" "}
-                      {order.order_items[0].produk_layanan} •{" "}
-                      {order.order_items[0].jenis_layanan}
-                    </div>
-                  )}
 
                   {/* Notes */}
                   {order.catatan_khusus && (

@@ -32,18 +32,21 @@ export async function POST(request: NextRequest) {
 
     const { email, password, role, full_name } = await request.json();
 
-    if (!email || !password || !role) {
+    if (!email || !role) {
       return NextResponse.json(
-        { error: "Email, password, dan role diperlukan" },
+        { error: "Email dan role diperlukan" },
         { status: 400 },
       );
     }
+
+    // Default password if not provided
+    const finalPassword = password || "12345678";
 
     // Create user in auth.users
     const { data: authData, error: authError } =
       await supabase.auth.admin.createUser({
         email,
-        password,
+        password: finalPassword,
         email_confirm: true,
       });
 
@@ -86,7 +89,7 @@ export async function PUT(request: NextRequest) {
   try {
     const supabase = createSupabaseAdmin();
 
-    const { id, role, full_name } = await request.json();
+    const { id, role, full_name, password } = await request.json();
 
     if (!id) {
       return NextResponse.json(
@@ -95,6 +98,21 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Step 1: Update Password if provided
+    if (password && password.length > 0) {
+      const { error: pwdError } = await supabase.auth.admin.updateUserById(id, {
+        password: password,
+      });
+
+      if (pwdError) {
+        return NextResponse.json(
+          { error: "Gagal update password: " + pwdError.message },
+          { status: 400 },
+        );
+      }
+    }
+
+    // Step 2: Update Profile
     const { error } = await supabase
       .from("auth_users")
       .update({ role, full_name })
