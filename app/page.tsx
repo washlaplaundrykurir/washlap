@@ -784,7 +784,7 @@ export default function Home() {
                       : "-";
                     const message = `Mohon proses permintaan antar/jemput dengan nomor tiket ${ticketNumbers.join(", ")}.\nNama: ${formData.nama}\nNomor: ${formData.nomorHP}\nAlamat: ${formData.alamat || "-"}\nWaktu siap jemput: ${waktuJemputStr}\nCatatan: ${formData.catatan || ""}`;
                     const encodedMessage = encodeURIComponent(message);
-                    const whatsappNumber = "6285765909380";
+                    const whatsappNumber = "6287808000550";
 
                     window.open(
                       `https://wa.me/${whatsappNumber}?text=${encodedMessage}`,
