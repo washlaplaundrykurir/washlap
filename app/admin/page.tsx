@@ -104,6 +104,17 @@ export default function AdminPage() {
     setIsLoading(true);
     setSubmitStatus({ type: null, message: "" });
 
+    // Validate Input
+    if (!formData.nama?.trim() || !formData.nomorHP?.trim()) {
+      setSubmitStatus({
+        type: "error",
+        message: "Nama dan Nomor HP wajib diisi!",
+      });
+      setIsLoading(false);
+
+      return;
+    }
+
     try {
       // Convert CalendarDateTime to ISO string
       const waktuPenjemputanStr = formData.waktuPenjemputan

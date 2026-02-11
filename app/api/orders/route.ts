@@ -1,11 +1,20 @@
 /* eslint-disable no-console */
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
-import { createSupabaseAdmin } from "@/utils/supabase/server";
+import { createSupabaseAdmin, createClient } from "@/utils/supabase/server";
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = createSupabaseAdmin();
+    const cookieStore = await cookies();
+    const supabaseAuth = createClient(cookieStore);
+
+    // Get current user (if any)
+    const {
+      data: { user },
+    } = await supabaseAuth.auth.getUser();
+
     const body = await request.json();
 
     const {
@@ -22,13 +31,17 @@ export async function POST(request: NextRequest) {
       catatan,
     } = body;
 
+    // Sanitize input to prevent duplicates due to whitespace
+    const cleanNama = nama?.trim();
+    const cleanNomorHP = nomorHP?.trim();
+
     // 1. Upsert customer (based on nomor_hp)
     const { data: customer, error: customerError } = await supabase
       .from("customers")
       .upsert(
         {
-          nomor_hp: nomorHP,
-          nama_terakhir: nama,
+          nomor_hp: cleanNomorHP,
+          nama_terakhir: cleanNama,
           alamat_terakhir: alamat,
           google_maps_terakhir: googleMapsLink,
         },
@@ -76,7 +89,7 @@ export async function POST(request: NextRequest) {
 
     // Insert one row per jenis_tugas type
     for (const type of jenisTugasArray) {
-      const nomorTiket = generateTicket(type, nama);
+      const nomorTiket = generateTicket(type, cleanNama);
 
       let catatanKhusus = `Produk: ${produkLayanan === "lainnya" ? produkLayananManual : produkLayanan}, Jenis: ${jenisLayanan}, Parfum: ${parfum}`;
 
@@ -98,6 +111,7 @@ export async function POST(request: NextRequest) {
             ? new Date(waktuPenjemputan).toISOString()
             : null,
           catatan_khusus: catatanKhusus,
+          created_by: user?.id || null, // Track who created the order
         })
         .select("id")
         .single();

@@ -34,23 +34,48 @@ export async function PUT(request: NextRequest) {
       waktuPenjemputan,
     } = await request.json();
 
-    if (!orderId || !customerId) {
+    if (!orderId) {
       return NextResponse.json(
-        { error: "Order ID dan Customer ID diperlukan" },
+        { error: "Order ID diperlukan" },
         { status: 400 },
       );
     }
 
-    // 1. Update Customer
-    const { error: customerError } = await supabaseAdmin
-      .from("customers")
-      .update({
-        nama_terakhir: nama,
-        nomor_hp: phone,
-      })
-      .eq("id", customerId);
+    let finalCustomerId = customerId;
 
-    if (customerError) throw customerError;
+    // 1. Handle Customer Data
+    // Case A: Customer ID exists -> Update existing customer
+    if (finalCustomerId) {
+      const { error: customerError } = await supabaseAdmin
+        .from("customers")
+        .update({
+          nama_terakhir: nama,
+          nomor_hp: phone,
+        })
+        .eq("id", finalCustomerId);
+
+      if (customerError) throw customerError;
+    }
+    // Case B: Customer ID missing but Phone provided -> Upsert by Phone & Link
+    else if (phone) {
+      const { data: newCustomer, error: upsertError } = await supabaseAdmin
+        .from("customers")
+        .upsert(
+          {
+            nomor_hp: phone,
+            nama_terakhir: nama,
+            // Only update alamat/maps if provided, else keep existing or null
+            ...(alamat ? { alamat_terakhir: alamat } : {}),
+            ...(mapsLink ? { google_maps_terakhir: mapsLink } : {}),
+          },
+          { onConflict: "nomor_hp" },
+        )
+        .select("id")
+        .single();
+
+      if (upsertError) throw upsertError;
+      finalCustomerId = newCustomer.id;
+    }
 
     // 2. Update Permintaan (Order)
     const updatePermintaanData: Record<string, unknown> = {
@@ -71,6 +96,11 @@ export async function PUT(request: NextRequest) {
         status_id_baru: statusId,
         changed_by: user?.id || null, // Track who changed it
       });
+    }
+
+    // Ensure we link the order to the customer if we just found/created one
+    if (finalCustomerId) {
+      updatePermintaanData.customer_id = finalCustomerId;
     }
 
     if (courierId !== undefined) updatePermintaanData.courier_id = courierId;

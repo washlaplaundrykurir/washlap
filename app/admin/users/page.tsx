@@ -74,6 +74,12 @@ export default function UsersPage() {
   };
 
   const handleCreate = async () => {
+    if (!formData.email?.trim() || !formData.password?.trim() || !formData.role) {
+      showToast("error", "Email, Password, dan Role wajib diisi!");
+
+      return;
+    }
+
     try {
       setActionLoading(true);
       const response = await fetch("/api/users", {
@@ -102,6 +108,11 @@ export default function UsersPage() {
 
   const handleUpdate = async () => {
     if (!selectedUser) return;
+    if (!formData.email?.trim() || !formData.role) {
+      showToast("error", "Email dan Role wajib diisi!");
+
+      return;
+    }
 
     try {
       setActionLoading(true);

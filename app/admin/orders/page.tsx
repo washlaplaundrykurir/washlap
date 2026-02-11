@@ -174,7 +174,13 @@ export default function OrdersPage() {
   }, [selectedOrder]);
 
   const handleSaveChanges = async () => {
-    if (!selectedOrder || !selectedOrder.customers) return;
+    if (!selectedOrder) return;
+
+    if (!editFormData.nama?.trim() || !editFormData.phone?.trim()) {
+      showToast("error", "Nama dan Nomor HP wajib diisi!");
+
+      return;
+    }
 
     try {
       const response = await fetch("/api/orders/update", {
@@ -182,7 +188,7 @@ export default function OrdersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           orderId: selectedOrder.id,
-          customerId: selectedOrder.customers.id,
+          customerId: selectedOrder.customers?.id || null,
           ...editFormData,
         }),
       });
@@ -312,6 +318,7 @@ export default function OrdersPage() {
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
+                    isReadOnly={!!selectedOrder?.customers}
                     label="Nama Pelanggan"
                     value={editFormData.nama}
                     variant="flat"
@@ -320,6 +327,7 @@ export default function OrdersPage() {
                     }
                   />
                   <Input
+                    isReadOnly={!!selectedOrder?.customers}
                     label="Nomor HP"
                     value={editFormData.phone}
                     variant="flat"
