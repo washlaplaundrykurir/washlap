@@ -91,10 +91,10 @@ export async function GET(request: NextRequest) {
         groupedOrders[courierId] = {
           courier: courierData
             ? {
-              id: courierData.id,
-              name: courierData.full_name || courierData.email,
-              email: courierData.email,
-            }
+                id: courierData.id,
+                name: courierData.full_name || courierData.email,
+                email: courierData.email,
+              }
             : null,
           orders: [],
         };

@@ -45,6 +45,12 @@ export async function GET(request: NextRequest) {
         status_ref:status_id (
           id,
           nama_status
+        ),
+        order_items (
+          id,
+          produk_layanan,
+          jenis_layanan,
+          parfum
         )
       `,
       )

@@ -53,6 +53,7 @@
     "@heroui/toast": "2.0.19",
     "@heroui/tooltip": "2.2.26",
     "@heroui/user": "2.2.24",
+    "@internationalized/date": "^3.11.0",
     "@react-aria/ssr": "3.9.10",
     "@react-aria/visually-hidden": "3.8.29",
     "@supabase/ssr": "^0.8.0",

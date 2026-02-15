@@ -372,7 +372,7 @@ export default function OrdersPage() {
                 <Input
                   label="Waktu Penjemputan"
                   type="datetime-local"
-                  value={editFormData.waktuPenjemputan}
+                  value={editFormData.waktuPenjemputan || ""}
                   variant="flat"
                   onValueChange={(v) =>
                     setEditFormData((p) => ({ ...p, waktuPenjemputan: v }))

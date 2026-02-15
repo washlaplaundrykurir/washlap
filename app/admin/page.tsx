@@ -4,7 +4,6 @@ import { Card, CardBody } from "@heroui/card";
 import { Button } from "@heroui/button";
 import { Input, Textarea } from "@heroui/input";
 import { CheckboxGroup, Checkbox } from "@heroui/checkbox";
-import { DatePicker } from "@heroui/date-picker";
 import { Divider } from "@heroui/divider";
 import {
   Modal,
@@ -15,12 +14,6 @@ import {
   useDisclosure,
 } from "@heroui/modal";
 import { useState, useEffect } from "react";
-import {
-  CalendarDateTime,
-  today,
-  getLocalTimeZone,
-} from "@internationalized/date";
-import { I18nProvider } from "@react-aria/i18n";
 import { ClipboardList, Truck, Package, Plus, Megaphone } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
@@ -52,7 +45,13 @@ export default function AdminPage() {
     alamat: "",
     googleMapsLink: "",
     permintaan: [] as string[],
-    waktuPenjemputan: null as CalendarDateTime | null,
+    waktuPenjemputan: (() => {
+      const n = new Date();
+
+      n.setMinutes(n.getMinutes() - n.getTimezoneOffset());
+
+      return n.toISOString().slice(0, 16);
+    })() as string | null,
     produkLayanan: "",
     produkLayananManual: "",
     jenisLayanan: "",
@@ -83,7 +82,7 @@ export default function AdminPage() {
               new Date(o.waktu_order) >= todayStart,
           ).length,
           pendingOrders: allOrders.filter(
-            (o: { status_id: number }) => o.status_id < 6,
+            (o: { status_id: number }) => o.status_id === 1,
           ).length,
           activeCouriers:
             result.data?.filter(
@@ -116,17 +115,11 @@ export default function AdminPage() {
     }
 
     try {
-      // Convert CalendarDateTime to ISO string
-      const waktuPenjemputanStr = formData.waktuPenjemputan
-        ? `${formData.waktuPenjemputan.year}-${String(formData.waktuPenjemputan.month).padStart(2, "0")}-${String(formData.waktuPenjemputan.day).padStart(2, "0")}T${String(formData.waktuPenjemputan.hour).padStart(2, "0")}:${String(formData.waktuPenjemputan.minute).padStart(2, "0")}`
-        : null;
-
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
-          waktuPenjemputan: waktuPenjemputanStr,
         }),
       });
 
@@ -156,13 +149,9 @@ export default function AdminPage() {
   const resetForm = () => {
     // Default to now
     const now = new Date();
-    const nowDt = new CalendarDateTime(
-      now.getFullYear(),
-      now.getMonth() + 1,
-      now.getDate(),
-      now.getHours(),
-      now.getMinutes(),
-    );
+
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    const nowStr = now.toISOString().slice(0, 16);
 
     setFormData({
       nama: "",
@@ -170,7 +159,7 @@ export default function AdminPage() {
       alamat: "",
       googleMapsLink: "",
       permintaan: [],
-      waktuPenjemputan: nowDt,
+      waktuPenjemputan: nowStr,
       produkLayanan: "",
       produkLayananManual: "",
       jenisLayanan: "",
@@ -239,6 +228,7 @@ export default function AdminPage() {
     const randomPerfume = perfumes[Math.floor(Math.random() * perfumes.length)];
 
     // Random date within next 3 days
+    // Random date within next 3 days
     const date = new Date();
 
     date.setDate(date.getDate() + Math.floor(Math.random() * 3));
@@ -248,14 +238,8 @@ export default function AdminPage() {
       0,
       0,
     );
-
-    const timeDto = new CalendarDateTime(
-      date.getFullYear(),
-      date.getMonth() + 1,
-      date.getDate(),
-      date.getHours(),
-      date.getMinutes(),
-    );
+    date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+    const timeDto = date.toISOString().slice(0, 16);
 
     setFormData({
       nama: randomName,
@@ -441,21 +425,14 @@ export default function AdminPage() {
                 <Checkbox value="antar">Antar</Checkbox>
               </CheckboxGroup>
 
-              <I18nProvider locale="id-ID">
-                <DatePicker
-                  granularity="minute"
-                  hourCycle={24}
-                  label="Waktu Penjemputan"
-                  minValue={today(getLocalTimeZone())}
-                  value={formData.waktuPenjemputan}
-                  onChange={(v) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      waktuPenjemputan: v as CalendarDateTime | null,
-                    }))
-                  }
-                />
-              </I18nProvider>
+              <Input
+                label="Waktu Penjemputan"
+                type="datetime-local"
+                value={formData.waktuPenjemputan || ""}
+                onChange={(e) =>
+                  handleInputChange("waktuPenjemputan", e.target.value)
+                }
+              />
 
               <Divider />
 

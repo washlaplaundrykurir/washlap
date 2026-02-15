@@ -12,6 +12,7 @@ import { History, ArrowLeft, Inbox, User, MapPin } from "lucide-react";
 interface Order {
   id: string;
   nomor_tiket: string;
+  nomor_nota: string | null;
   jenis_tugas: string;
   alamat_jalan: string;
   google_maps_link: string;
@@ -185,6 +186,16 @@ export default function KurirHistoryPage() {
                         <span className="font-bold text-gray-900 dark:text-white">
                           {order.nomor_tiket}
                         </span>
+                        {/* Display Nomor Nota if available */}
+                        {order.nomor_nota && (
+                          <Chip
+                            className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"
+                            size="sm"
+                            variant="flat"
+                          >
+                            Nota: {order.nomor_nota}
+                          </Chip>
+                        )}
                         <Chip
                           color={
                             order.jenis_tugas === "JEMPUT"

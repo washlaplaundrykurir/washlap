@@ -74,7 +74,11 @@ export default function UsersPage() {
   };
 
   const handleCreate = async () => {
-    if (!formData.email?.trim() || !formData.password?.trim() || !formData.role) {
+    if (
+      !formData.email?.trim() ||
+      !formData.password?.trim() ||
+      !formData.role
+    ) {
       showToast("error", "Email, Password, dan Role wajib diisi!");
 
       return;

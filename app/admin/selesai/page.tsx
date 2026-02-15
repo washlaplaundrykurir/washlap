@@ -43,6 +43,12 @@ interface Order {
   customers: { id: string; nomor_hp: string; nama_terakhir: string } | null;
   auth_users: { id: string; full_name: string; email: string } | null;
   status_ref: { id: number; nama_status: string } | null;
+  order_items: {
+    id: string;
+    produk_layanan: string;
+    jenis_layanan: string;
+    parfum: string;
+  }[];
 }
 
 const PendingCard = ({
@@ -98,6 +104,41 @@ const PendingCard = ({
             <Truck size={14} /> Kurir:{" "}
             {order.auth_users?.full_name || order.auth_users?.email || "-"}
           </p>
+
+          {/* Customer Order Details using simple grid */}
+          {order.order_items && order.order_items.length > 0 && (
+            <div className="mt-2 p-3 bg-yellow-100/50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800/30">
+              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Detail Permintaan Customer:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                <div className="flex flex-col">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Produk
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-white capitalize">
+                    {order.order_items[0].produk_layanan.replace(/-/g, " ")}
+                  </span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Layanan
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-white capitalize">
+                    {order.order_items[0].jenis_layanan}
+                  </span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Parfum
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-white capitalize">
+                    {order.order_items[0].parfum.replace(/-/g, " ")}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Action Section - Different for JEMPUT vs ANTAR */}

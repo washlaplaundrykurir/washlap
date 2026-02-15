@@ -6,15 +6,7 @@ import { Button } from "@heroui/button";
 import { RadioGroup, Radio } from "@heroui/radio";
 import { Checkbox, CheckboxGroup } from "@heroui/checkbox";
 import { Divider } from "@heroui/divider";
-import { DatePicker } from "@heroui/date-picker";
 import { useState, useEffect } from "react";
-import {
-  CalendarDateTime,
-  today,
-  now,
-  getLocalTimeZone,
-} from "@internationalized/date";
-import { I18nProvider } from "@react-aria/i18n";
 import {
   Modal,
   ModalContent,
@@ -37,17 +29,12 @@ export default function Home() {
     googleMapsLink: "",
     permintaan: [] as string[],
     waktuPenjemputan: (() => {
-      const n = now(getLocalTimeZone());
+      const n = new Date();
 
-      return new CalendarDateTime(
-        n.year,
-        n.month,
-        n.day,
-        n.hour,
-        n.minute,
-        n.second,
-      );
-    })() as CalendarDateTime | null,
+      n.setMinutes(n.getMinutes() - n.getTimezoneOffset());
+
+      return n.toISOString().slice(0, 16);
+    })(),
     produkLayanan: "",
     produkLayananManual: "",
     jenisLayanan: "",
@@ -91,16 +78,11 @@ export default function Home() {
       googleMapsLink: "",
       permintaan: [],
       waktuPenjemputan: (() => {
-        const n = now(getLocalTimeZone());
+        const n = new Date();
 
-        return new CalendarDateTime(
-          n.year,
-          n.month,
-          n.day,
-          n.hour,
-          n.minute,
-          n.second,
-        );
+        n.setMinutes(n.getMinutes() - n.getTimezoneOffset());
+
+        return n.toISOString().slice(0, 16);
       })(),
       produkLayanan: "",
       produkLayananManual: "",
@@ -185,15 +167,8 @@ export default function Home() {
     } else {
       date.setHours(8 + Math.floor(Math.random() * 9));
     }
-    date.setMinutes(Math.floor(Math.random() * 4) * 15);
-
-    const timeDto = new CalendarDateTime(
-      date.getFullYear(),
-      date.getMonth() + 1,
-      date.getDate(),
-      date.getHours(),
-      date.getMinutes(),
-    );
+    date.setMinutes(Math.floor(Math.random() * 4) * 15 - date.getTimezoneOffset());
+    const timeDto = date.toISOString().slice(0, 16);
 
     setFormData({
       nama: randomName,
@@ -234,9 +209,7 @@ export default function Home() {
 
     try {
       // Convert CalendarDateTime to ISO string
-      const waktuPenjemputanStr = formData.waktuPenjemputan
-        ? `${formData.waktuPenjemputan.year}-${String(formData.waktuPenjemputan.month).padStart(2, "0")}-${String(formData.waktuPenjemputan.day).padStart(2, "0")}T${String(formData.waktuPenjemputan.hour).padStart(2, "0")}:${String(formData.waktuPenjemputan.minute).padStart(2, "0")}`
-        : null;
+      const waktuPenjemputanStr = formData.waktuPenjemputan ? formData.waktuPenjemputan : null;
 
       const response = await fetch("/api/orders", {
         method: "POST",
@@ -493,29 +466,18 @@ export default function Home() {
 
             {/* Waktu Penjemputan */}
             <div className="mb-4">
-              <I18nProvider locale="id-ID">
-                <DatePicker
-                  classNames={{
-                    base: "w-full",
-                    label: "text-gray-700 dark:text-white/80",
-                    inputWrapper:
-                      "bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20",
-                    selectorButton: "text-gray-600 dark:text-white/70",
-                  }}
-                  granularity="minute"
-                  hourCycle={24}
-                  label="Kapan perkiraan waktu penjemputan"
-                  labelPlacement="outside"
-                  minValue={today(getLocalTimeZone())}
-                  value={formData.waktuPenjemputan}
-                  onChange={(value) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      waktuPenjemputan: value as CalendarDateTime | null,
-                    }))
-                  }
-                />
-              </I18nProvider>
+              <Input
+                label="Kapan perkiraan waktu penjemputan"
+                labelPlacement="outside"
+                type="datetime-local"
+                value={formData.waktuPenjemputan || ""}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    waktuPenjemputan: e.target.value,
+                  }))
+                }
+              />
               <p className="text-xs text-gray-500 dark:text-white/50 mt-2">
                 Jam operasional: 11:00-20:30
               </p>
@@ -690,11 +652,10 @@ export default function Home() {
             {/* Status Message */}
             {submitStatus.type && (
               <div
-                className={`p-4 rounded-lg text-center ${
-                  submitStatus.type === "success"
-                    ? "bg-green-500/20 text-green-600 dark:text-green-400 border border-green-500/30"
-                    : "bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30"
-                }`}
+                className={`p-4 rounded-lg text-center ${submitStatus.type === "success"
+                  ? "bg-green-500/20 text-green-600 dark:text-green-400 border border-green-500/30"
+                  : "bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30"
+                  }`}
               >
                 {submitStatus.message}
               </div>
@@ -780,7 +741,13 @@ export default function Home() {
                   onPress={() => {
                     // WhatsApp Logic
                     const waktuJemputStr = formData.waktuPenjemputan
-                      ? `${String(formData.waktuPenjemputan.day).padStart(2, "0")}/${String(formData.waktuPenjemputan.month).padStart(2, "0")}/${formData.waktuPenjemputan.year} ${String(formData.waktuPenjemputan.hour).padStart(2, "0")}:${String(formData.waktuPenjemputan.minute).padStart(2, "0")}`
+                      ? new Date(formData.waktuPenjemputan).toLocaleString("id-ID", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
                       : "-";
                     const message = `Mohon proses permintaan antar/jemput dengan nomor tiket ${ticketNumbers.join(", ")}.\nNama: ${formData.nama}\nNomor: ${formData.nomorHP}\nAlamat: ${formData.alamat || "-"}\nWaktu siap jemput: ${waktuJemputStr}\nCatatan: ${formData.catatan || ""}`;
                     const encodedMessage = encodeURIComponent(message);

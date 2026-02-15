@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
         `
                 id,
                 nomor_tiket,
+                nomor_nota,
                 jenis_tugas,
                 alamat_jalan,
                 google_maps_link,
