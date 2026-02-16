@@ -212,9 +212,14 @@ export default function KurirPage() {
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
           <ClipboardList className="w-5 h-5" /> Tugas Aktif
         </h2>
-        <Button as={Link} href="/kurir/history" size="sm" variant="flat">
-          Lihat Riwayat →
-        </Button>
+        <div className="flex gap-2">
+          <Button as={Link} href="/kurir/rekap" size="sm" variant="flat">
+            Lihat Rekap
+          </Button>
+          <Button as={Link} href="/kurir/history" size="sm" variant="flat">
+            Lihat Riwayat →
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (

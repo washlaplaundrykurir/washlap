@@ -6,9 +6,10 @@ import { DashboardSidebar } from "./DashboardSidebar";
 interface DashboardLayoutProps {
   children: React.ReactNode;
   role: "super-admin" | "admin" | "kurir";
+  userName?: string;
 }
 
-export function DashboardLayout({ children, role }: DashboardLayoutProps) {
+export function DashboardLayout({ children, role, userName }: DashboardLayoutProps) {
   // User requested sidebar for admin and super-admin on desktop
   const showSidebar = role === "admin" || role === "super-admin";
 
@@ -20,11 +21,11 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
       {showSidebar ? (
         <>
           {/* Desktop: Sidebar */}
-          <DashboardSidebar role={role} />
+          <DashboardSidebar role={role} userName={userName} />
 
           {/* Mobile: Top Navbar */}
           <div className="md:hidden sticky top-0 z-40">
-            <DashboardNavbar hideDesktopNav={true} role={role} />
+            <DashboardNavbar hideDesktopNav={true} role={role} userName={userName} />
           </div>
 
           {/* Content Area */}
@@ -35,7 +36,7 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
       ) : (
         <>
           {/* Standard Layout (e.g. Kurir) - Top Navbar always */}
-          <DashboardNavbar role={role} />
+          <DashboardNavbar role={role} userName={userName} />
 
           <main className="max-w-6xl mx-auto p-6">{children}</main>
         </>

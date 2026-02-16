@@ -48,34 +48,40 @@ export async function POST(request: NextRequest) {
         email,
         password: finalPassword,
         email_confirm: true,
+        user_metadata: {
+          role,
+          full_name,
+        },
       });
 
     if (authError) {
       return NextResponse.json({ error: authError.message }, { status: 400 });
     }
 
-    // Create record in auth_users table
-    const { error: profileError } = await supabase.from("auth_users").insert({
-      id: authData.user.id,
-      email,
-      role,
-      full_name: full_name || null,
-    });
+    // EXPLICIT UPDATE: Force update public.auth_users to ensure correct role
+    // This overrides any default 'user' role set by triggers
+    const { error: profileError } = await supabase
+      .from("auth_users")
+      .update({
+        role: role, // Ensure this is the selected role (e.g., 'kurir', 'admin')
+        full_name: full_name,
+      })
+      .eq("id", authData.user.id);
 
     if (profileError) {
-      // Rollback: delete the auth user if profile creation fails
-      await supabase.auth.admin.deleteUser(authData.user.id);
-
-      return NextResponse.json(
-        { error: profileError.message },
-        { status: 500 },
-      );
+      console.error("Profile update error:", profileError);
+      // We don't block response, but we log it
     }
 
     return NextResponse.json({
       success: true,
       message: "User berhasil dibuat",
-      user: { id: authData.user.id, email, role, full_name },
+      user: {
+        id: authData.user.id,
+        email,
+        role,
+        full_name,
+      },
     });
   } catch (error) {
     console.error("Create user error:", error);
@@ -98,18 +104,24 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Step 1: Update Password if provided
+    // Step 1: Update Password and Metadata in auth.users
+    const updateAttrs: any = {
+      user_metadata: { role, full_name },
+    };
     if (password && password.length > 0) {
-      const { error: pwdError } = await supabase.auth.admin.updateUserById(id, {
-        password: password,
-      });
+      updateAttrs.password = password;
+    }
 
-      if (pwdError) {
-        return NextResponse.json(
-          { error: "Gagal update password: " + pwdError.message },
-          { status: 400 },
-        );
-      }
+    const { error: authUpdateError } = await supabase.auth.admin.updateUserById(
+      id,
+      updateAttrs,
+    );
+
+    if (authUpdateError) {
+      return NextResponse.json(
+        { error: "Gagal update auth: " + authUpdateError.message },
+        { status: 400 },
+      );
     }
 
     // Step 2: Update Profile

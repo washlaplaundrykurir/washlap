@@ -180,13 +180,24 @@ const PendingCard = ({
               </Button>
             </>
           ) : (
-            /* ANTAR: Nota sudah diisi saat assign, tinggal konfirmasi */
+            /* ANTAR: Input nota if missing, otherwise show it */
             <>
-              {order.nomor_nota && (
+              {order.nomor_nota ? (
                 <span className="text-sm text-gray-600 dark:text-white/70 flex-1 flex items-center gap-1">
                   <FileText size={14} /> Nota:{" "}
                   <strong>{order.nomor_nota}</strong>
                 </span>
+              ) : (
+                <Input
+                  className="flex-1"
+                  placeholder="Masukkan nomor nota"
+                  size="sm"
+                  value={notaInputs[order.id] || ""}
+                  variant="flat"
+                  onValueChange={(v) =>
+                    setNotaInputs((prev) => ({ ...prev, [order.id]: v }))
+                  }
+                />
               )}
               <Button
                 isIconOnly

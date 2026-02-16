@@ -203,6 +203,30 @@ export default function OrdersPage() {
     }
   };
 
+  const handleCancel = async () => {
+    if (!selectedOrder) return;
+    if (!confirm("Apakah Anda yakin ingin membatalkan pesanan ini? Aksi ini tidak dapat dibatalkan.")) return;
+
+    try {
+      const response = await fetch("/api/orders/update", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: selectedOrder.id,
+          statusId: 7, // Batal
+        }),
+      });
+
+      if (!response.ok) throw new Error("Gagal membatalkan pesanan");
+
+      showToast("success", "Pesanan berhasil dibatalkan");
+      fetchOrders();
+      setSelectedOrder(null);
+    } catch {
+      showToast("error", "Gagal membatalkan pesanan");
+    }
+  };
+
   return (
     <>
       {/* Content */}
@@ -449,9 +473,8 @@ export default function OrdersPage() {
                       {/* Nota input for ANTAR orders when assigning */}
                       {selectedOrder?.jenis_tugas === "ANTAR" && (
                         <Input
-                          isRequired
-                          label="Nomor Nota"
-                          placeholder="Wajib diisi untuk order ANTAR"
+                          label="Nomor Nota (Opsional)"
+                          placeholder="Bisa diisi nanti di halaman Selesai"
                           value={editFormData.nomorNota}
                           variant="flat"
                           onValueChange={(v) =>
@@ -465,21 +488,31 @@ export default function OrdersPage() {
               </div>
             )}
           </ModalBody>
-          <ModalFooter>
-            <Button
-              color="danger"
-              variant="light"
-              onPress={() => setSelectedOrder(null)}
-            >
-              Batal
-            </Button>
-            <Button color="primary" onPress={handleSaveChanges}>
-              Simpan Perubahan
-            </Button>
+          <ModalFooter className="flex justify-between sm:justify-end gap-2">
+            <div className="flex w-full sm:w-auto sm:mr-auto">
+              <Button
+                color="danger"
+                variant="flat"
+                onPress={handleCancel}
+              >
+                Batalkan Pesanan
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                color="danger"
+                variant="light"
+                onPress={() => setSelectedOrder(null)}
+              >
+                Tutup
+              </Button>
+              <Button color="primary" onPress={handleSaveChanges}>
+                Simpan Perubahan
+              </Button>
+            </div>
           </ModalFooter>
-        </ModalContent>
+        </ModalContent >
       </Modal>
-      {/* deleted closed content div */}
     </>
   );
 }

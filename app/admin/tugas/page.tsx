@@ -42,6 +42,8 @@ interface Order {
   customers: { id: string; nomor_hp: string; nama_terakhir: string } | null;
   auth_users: { id: string; full_name: string; email: string } | null;
   status_ref: { id: number; nama_status: string } | null;
+  created_by_user: { id: string; full_name: string } | null;
+  order_items: { jenis_layanan: string }[];
 }
 
 interface Courier {
@@ -196,6 +198,34 @@ function TugasPageContent() {
     });
   };
 
+  const [sortDescriptor, setSortDescriptor] = useState({
+    column: "waktu_order",
+    direction: "descending",
+  });
+
+  const sortedOrders = [...orders].sort((a, b) => {
+    let first: string | number | null = a[sortDescriptor.column as keyof Order] as string | number | null;
+    let second: string | number | null = b[sortDescriptor.column as keyof Order] as string | number | null;
+
+    if (sortDescriptor.column === "customers") {
+      first = a.customers?.nama_terakhir || "";
+      second = b.customers?.nama_terakhir || "";
+    } else if (sortDescriptor.column === "couriers") {
+      first =
+        a.auth_users?.full_name || a.auth_users?.email || "Belum ditugaskan";
+      second =
+        b.auth_users?.full_name || b.auth_users?.email || "Belum ditugaskan";
+    }
+
+    // Convert to default empty string if null/undefined for safe comparison
+    const firstStr = (first ?? "").toString();
+    const secondStr = (second ?? "").toString();
+
+    const cmp = firstStr < secondStr ? -1 : firstStr > secondStr ? 1 : 0;
+
+    return sortDescriptor.direction === "descending" ? -cmp : cmp;
+  });
+
   return (
     <>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -206,6 +236,44 @@ function TugasPageContent() {
           <p className="text-gray-600 dark:text-white/70">
             Kelola penjemputan dan pengantaran
           </p>
+        </div>
+        <div className="flex gap-2">
+          <Select
+            className="w-48"
+            label="Urutkan"
+            placeholder="Pilih urutan"
+            selectedKeys={[sortDescriptor.column]}
+            variant="bordered"
+            onChange={(e) => {
+              if (e.target.value) {
+                setSortDescriptor({
+                  column: e.target.value,
+                  direction: sortDescriptor.direction,
+                });
+              }
+            }}
+          >
+            <SelectItem key="waktu_order">Tanggal</SelectItem>
+            <SelectItem key="customers">Nama Pelanggan</SelectItem>
+            <SelectItem key="couriers">Nama Kurir</SelectItem>
+          </Select>
+          <Button
+            isIconOnly
+            variant="flat"
+            onClick={() =>
+              setSortDescriptor((prev) => ({
+                ...prev,
+                direction:
+                  prev.direction === "ascending" ? "descending" : "ascending",
+              }))
+            }
+          >
+            {sortDescriptor.direction === "ascending" ? (
+              <span className="text-lg">↑</span>
+            ) : (
+              <span className="text-lg">↓</span>
+            )}
+          </Button>
         </div>
       </div>
 
@@ -270,7 +338,7 @@ function TugasPageContent() {
           <div className="flex justify-center py-20">
             <Spinner size="lg" />
           </div>
-        ) : orders.length === 0 ? (
+        ) : sortedOrders.length === 0 ? (
           <Card className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">
             <CardBody className="py-12 text-center text-gray-500">
               Tidak ada tugas{" "}
@@ -279,7 +347,7 @@ function TugasPageContent() {
           </Card>
         ) : (
           <div className="space-y-4">
-            {orders.map((order) => (
+            {sortedOrders.map((order) => (
               <Card
                 key={order.id}
                 className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30"
@@ -304,7 +372,10 @@ function TugasPageContent() {
                           size="sm"
                           variant="flat"
                         >
-                          {activeTab === "jemput" ? "JEMPUT" : "ANTAR"}
+                          {activeTab === "jemput" ? "JEM" : "ANT"}
+                          {order.order_items?.some(
+                            (i) => i.jenis_layanan?.toLowerCase() === "express",
+                          ) && " E"}
                         </Chip>
                       </div>
                       <p className="text-sm text-gray-600 dark:text-white/70 mb-1 flex items-center gap-1">
@@ -327,6 +398,11 @@ function TugasPageContent() {
                       <p className="text-xs text-gray-400 mt-2">
                         Order: {formatDate(order.waktu_order)}
                       </p>
+                      {order.created_by_user && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Admin: {order.created_by_user.full_name}
+                        </p>
+                      )}
                     </div>
                     <div className="flex flex-col gap-2 min-w-[180px]">
                       <div className="text-sm">
@@ -337,33 +413,37 @@ function TugasPageContent() {
                             "Belum ditugaskan"}
                         </span>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="flat"
-                        onClick={() => {
-                          setSelectedOrder(order);
-                          setSelectedCourier(order.courier_id || "");
-                          assignModal.onOpen();
-                        }}
-                      >
-                        {order.courier_id ? "Ganti Kurir" : "Tugaskan Kurir"}
-                      </Button>
-                      <Button
-                        color="success"
-                        size="sm"
-                        variant="flat"
-                        onClick={() => handleComplete(order.id)}
-                      >
-                        {activeTab === "jemput" ? (
-                          <>
-                            <Check size={16} /> Sudah Dijemput
-                          </>
-                        ) : (
-                          <>
-                            <Check size={16} /> Sudah Diantar
-                          </>
-                        )}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          className="flex-1"
+                          size="sm"
+                          variant="flat"
+                          onClick={() => {
+                            setSelectedOrder(order);
+                            setSelectedCourier(order.courier_id || "");
+                            assignModal.onOpen();
+                          }}
+                        >
+                          {order.courier_id ? "Ganti" : "Tugaskan"}
+                        </Button>
+                        <Button
+                          className="flex-1"
+                          color="success"
+                          size="sm"
+                          variant="flat"
+                          onClick={() => handleComplete(order.id)}
+                        >
+                          {activeTab === "jemput" ? (
+                            <>
+                              <Check size={16} /> Jemput
+                            </>
+                          ) : (
+                            <>
+                              <Check size={16} /> Antar
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardBody>

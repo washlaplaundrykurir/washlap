@@ -45,6 +45,20 @@ export async function GET(request: NextRequest) {
         )
       `);
 
+    // Date filtering
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+
+    if (startDate) {
+      query = query.gte("waktu_order", startDate);
+    }
+    if (endDate) {
+      // Add one day to include the end date fully
+      const nextDay = new Date(endDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+      query = query.lt("waktu_order", nextDay.toISOString().split("T")[0]);
+    }
+
     // Filter for unassigned orders only (courier_id is null OR status_id = 1)
     if (unassignedOnly) {
       query = query.or("courier_id.is.null,status_id.eq.1");
@@ -91,10 +105,10 @@ export async function GET(request: NextRequest) {
         groupedOrders[courierId] = {
           courier: courierData
             ? {
-                id: courierData.id,
-                name: courierData.full_name || courierData.email,
-                email: courierData.email,
-              }
+              id: courierData.id,
+              name: courierData.full_name || courierData.email,
+              email: courierData.email,
+            }
             : null,
           orders: [],
         };

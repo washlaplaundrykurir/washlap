@@ -22,6 +22,7 @@ import { ThemeSwitch } from "@/components/theme-switch";
 interface DashboardNavbarProps {
   role: "super-admin" | "admin" | "kurir";
   hideDesktopNav?: boolean;
+  userName?: string;
 }
 
 export const adminLinks = [
@@ -60,12 +61,14 @@ export const kurirLinks = [
     label: "Tugas Saya",
     icon: <ClipboardList size={20} />,
   },
+  { href: "/kurir/rekap", label: "Rekap", icon: <FileSpreadsheet size={20} /> },
   { href: "/kurir/history", label: "Riwayat", icon: <ScrollText size={20} /> },
 ];
 
 export function DashboardNavbar({
   role: initialRole,
   hideDesktopNav = false,
+  userName,
 }: DashboardNavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -181,11 +184,10 @@ export function DashboardNavbar({
                   return (
                     <Link
                       key={link.href}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        isActive
-                          ? "bg-primary/10 text-primary"
-                          : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10"
-                      }`}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
+                        ? "bg-primary/10 text-primary"
+                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10"
+                        }`}
                       href={link.href}
                     >
                       {link.label}
@@ -234,11 +236,10 @@ export function DashboardNavbar({
 
       {/* Mobile Slide-out Menu */}
       <div
-        className={`fixed inset-0 z-50 md:hidden transition-opacity duration-300 ${
-          isMobileMenuOpen
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none"
-        }`}
+        className={`fixed inset-0 z-50 md:hidden transition-opacity duration-300 ${isMobileMenuOpen
+          ? "opacity-100 pointer-events-auto"
+          : "opacity-0 pointer-events-none"
+          }`}
       >
         {/* Backdrop */}
         <div
@@ -255,9 +256,8 @@ export function DashboardNavbar({
 
         {/* Menu Panel */}
         <div
-          className={`absolute left-0 top-0 h-full w-72 bg-white dark:bg-gray-900 shadow-2xl transform transition-transform duration-300 ${
-            isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+          className={`absolute left-0 top-0 h-full w-72 bg-white dark:bg-gray-900 shadow-2xl transform transition-transform duration-300 ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
         >
           {/* Menu Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-white/10">
@@ -291,9 +291,11 @@ export function DashboardNavbar({
 
           {/* Role Badge */}
           <div className="px-4 py-3 border-b border-gray-200 dark:border-white/10">
-            <span className="text-xs px-3 py-1.5 rounded-full bg-primary/10 text-primary font-medium uppercase">
-              {displayRole}
-            </span>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs px-3 py-1.5 rounded-full bg-primary/10 text-primary font-medium uppercase w-fit">
+                {displayRole}
+              </span>
+            </div>
           </div>
 
           {/* Menu Links */}
@@ -304,11 +306,10 @@ export function DashboardNavbar({
               return (
                 <Link
                   key={link.href}
-                  className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-primary/10 text-primary border-r-4 border-primary"
-                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10"
-                  }`}
+                  className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${isActive
+                    ? "bg-primary/10 text-primary border-r-4 border-primary"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10"
+                    }`}
                   href={link.href}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >

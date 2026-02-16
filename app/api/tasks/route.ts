@@ -51,6 +51,10 @@ export async function GET(request: NextRequest) {
           produk_layanan,
           jenis_layanan,
           parfum
+        ),
+        created_by_user:created_by (
+          id,
+          full_name
         )
       `,
       )

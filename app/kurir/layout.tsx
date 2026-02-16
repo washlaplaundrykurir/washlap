@@ -10,7 +10,7 @@ interface JWTPayload {
   exp: number;
 }
 
-async function getUserRole() {
+async function getUserProfile() {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("sb-access-token")?.value;
 
@@ -24,11 +24,11 @@ async function getUserRole() {
     const supabase = createSupabaseAdmin();
     const { data } = await supabase
       .from("auth_users")
-      .select("role")
+      .select("role, full_name, email")
       .eq("id", decoded.sub)
       .single();
 
-    return data?.role;
+    return data;
   } catch {
     return null;
   }
@@ -39,13 +39,16 @@ export default async function KurirLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const role = await getUserRole();
+  const user = await getUserProfile();
+  const role = user?.role;
   // Default to 'kurir' if something fails, but ideally should redirect if not authorized.
   // For now, mirroring admin layout logic.
   const validRole =
     role === "super-admin" || role === "admin" || role === "kurir"
       ? role
       : "kurir";
+
+  const userName = user?.full_name || user?.email || undefined;
 
   // Force role to be stripped to one of the expected types.
   // If user is admin/super-admin but viewing /kurir pages, they should probably see them?
@@ -76,7 +79,7 @@ export default async function KurirLayout({
   // I will pass the detected `role`. If it's `admin`, they get Sidebar. This is safer.
 
   return (
-    <DashboardLayout role={validRole as "kurir" | "admin" | "super-admin"}>
+    <DashboardLayout role={validRole as "kurir" | "admin" | "super-admin"} userName={userName}>
       {children}
     </DashboardLayout>
   );

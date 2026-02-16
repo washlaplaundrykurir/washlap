@@ -36,6 +36,7 @@ export default function AdminPage() {
     message: string;
   }>({ type: null, message: "" });
   const { showToast } = useToast();
+  const [userName, setUserName] = useState("");
 
   const orderModal = useDisclosure();
 
@@ -59,9 +60,21 @@ export default function AdminPage() {
     catatan: "",
   });
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
+
+
+  const fetchUser = async () => {
+    try {
+      const res = await fetch("/api/users/me");
+
+      if (res.ok) {
+        const data = await res.json();
+
+        setUserName(data.user?.full_name || "");
+      }
+    } catch {
+      // Ignore
+    }
+  };
 
   const fetchStats = async () => {
     try {
@@ -94,6 +107,11 @@ export default function AdminPage() {
       // Ignore errors
     }
   };
+
+  useEffect(() => {
+    fetchStats();
+    fetchUser();
+  }, []);
 
   const handleInputChange = (field: string, value: string | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -265,8 +283,9 @@ export default function AdminPage() {
     <>
       {/* Header with Add Button */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           Dashboard Admin
+          {userName && <span className="text-lg font-normal text-gray-500 dark:text-gray-400">({userName})</span>}
         </h1>
         <Button
           color="primary"

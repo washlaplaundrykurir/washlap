@@ -11,9 +11,10 @@ import { ThemeSwitch } from "@/components/theme-switch";
 
 interface DashboardSidebarProps {
   role: "super-admin" | "admin" | "kurir";
+  userName?: string;
 }
 
-export function DashboardSidebar({ role }: DashboardSidebarProps) {
+export function DashboardSidebar({ role, userName }: DashboardSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const userRole = role;
@@ -64,11 +65,10 @@ export function DashboardSidebar({ role }: DashboardSidebarProps) {
           return (
             <Link
               key={link.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
-                isActive
-                  ? "bg-primary/10 text-primary shadow-sm"
-                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white"
-              }`}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${isActive
+                ? "bg-primary/10 text-primary shadow-sm"
+                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white"
+                }`}
               href={link.href}
             >
               <span className="text-lg">{link.icon}</span>

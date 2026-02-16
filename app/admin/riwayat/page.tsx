@@ -103,6 +103,16 @@ export default function RiwayatPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
+  // Date Filter State (Default: Last 8 days)
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 8);
+    return d.toISOString().split("T")[0];
+  });
+  const [endDate, setEndDate] = useState(() => {
+    return new Date().toISOString().split("T")[0];
+  });
+
   const [selectedLogs, setSelectedLogs] = useState<StatusLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const timelineModal = useDisclosure();
@@ -111,11 +121,16 @@ export default function RiwayatPage() {
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [startDate, endDate]); // Refetch when dates change
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch("/api/orders/list");
+      setIsLoading(true);
+      const params = new URLSearchParams();
+      if (startDate) params.append("startDate", startDate);
+      if (endDate) params.append("endDate", endDate);
+
+      const response = await fetch(`/api/orders/list?${params.toString()}`);
       const result = await response.json();
 
       if (!response.ok) {
@@ -134,8 +149,10 @@ export default function RiwayatPage() {
   const fetchLogs = async (orderId: string) => {
     setLogsLoading(true);
     timelineModal.onOpen();
+    console.log("Fetching logs for orderId:", orderId);
     try {
-      const response = await fetch(`/api/orders/${orderId}/logs`);
+      // Use the new query param based endpoint
+      const response = await fetch(`/api/logs?orderId=${orderId}`);
       const result = await response.json();
 
       if (response.ok) {
@@ -199,45 +216,118 @@ export default function RiwayatPage() {
     });
   };
 
+  const [sortDescriptor, setSortDescriptor] = useState({
+    column: "waktu_order",
+    direction: "descending",
+  });
+
   // Flatten orders and filter
   const allOrders = data.flatMap((group) =>
     group.orders.map((order) => ({ ...order, courierName: group.courierName })),
   );
 
-  const filteredOrders = allOrders.filter((order) => {
-    const searchLower = searchTerm.toLowerCase();
-    const matchesSearch =
-      order.nomor_tiket?.toLowerCase().includes(searchLower) ||
-      order.customers?.nama_terakhir?.toLowerCase().includes(searchLower) ||
-      order.customers?.nomor_hp?.includes(searchTerm) ||
-      order.alamat_jalan?.toLowerCase().includes(searchLower) ||
-      order.courierName?.toLowerCase().includes(searchLower);
+  const filteredOrders = allOrders
+    .filter((order) => {
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch =
+        order.nomor_tiket?.toLowerCase().includes(searchLower) ||
+        order.customers?.nama_terakhir?.toLowerCase().includes(searchLower) ||
+        order.customers?.nomor_hp?.includes(searchTerm) ||
+        order.alamat_jalan?.toLowerCase().includes(searchLower) ||
+        order.courierName?.toLowerCase().includes(searchLower);
 
-    const matchesStatus =
-      statusFilter === "all" || String(order.status_id) === statusFilter;
+      const matchesStatus =
+        statusFilter === "all" || String(order.status_id) === statusFilter;
 
-    return matchesSearch && matchesStatus;
-  });
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      let first: string | number = "";
+      let second: string | number = "";
+
+      switch (sortDescriptor.column) {
+        case "waktu_order":
+          first = new Date(a.waktu_order).getTime();
+          second = new Date(b.waktu_order).getTime();
+          break;
+        case "customer":
+          first = a.customers?.nama_terakhir || "";
+          second = b.customers?.nama_terakhir || "";
+          break;
+        case "status":
+          first = a.status_ref?.nama_status || "";
+          second = b.status_ref?.nama_status || "";
+          break;
+        case "ticket":
+          first = a.nomor_tiket || "";
+          second = b.nomor_tiket || "";
+          break;
+        default:
+          first = new Date(a.waktu_order).getTime();
+          second = new Date(b.waktu_order).getTime();
+      }
+
+      const cmp = first < second ? -1 : first > second ? 1 : 0;
+
+      return sortDescriptor.direction === "descending" ? -cmp : cmp;
+    });
 
   return (
     <>
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <ScrollText className="w-6 h-6" /> Riwayat Pesanan
-          </h1>
-          <p className="text-gray-600 dark:text-white/70">
-            Total: {filteredOrders.length} pesanan
-          </p>
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <ScrollText className="w-6 h-6" /> Riwayat Pesanan
+            </h1>
+            <p className="text-gray-600 dark:text-white/70">
+              Total: {filteredOrders.length} pesanan
+            </p>
+          </div>
+          <Input
+            className="w-full md:w-72"
+            classNames={{
+              inputWrapper:
+                "bg-white/60 dark:bg-white/15 backdrop-blur-xl border border-black/10 dark:border-white/30",
+            }}
+            placeholder="Cari tiket, nama, HP..."
+            startContent={<Search className="text-gray-400" size={16} />}
+            value={searchTerm}
+            onValueChange={setSearchTerm}
+          />
         </div>
 
-        <div className="flex gap-2 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-3 p-4 bg-gray-50 dark:bg-zinc-900/50 rounded-xl border border-gray-200 dark:border-gray-800">
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <span className="text-xs font-medium text-gray-500 uppercase">
+              Filter Tanggal:
+            </span>
+            <Input
+              type="date"
+              className="w-36"
+              size="sm"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+            <span className="text-gray-400">-</span>
+            <Input
+              type="date"
+              className="w-36"
+              size="sm"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
+
+          <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 hidden md:block" />
+
           <Select
             className="w-40"
             defaultSelectedKeys={["all"]}
             placeholder="Filter Status"
             selectionMode="single"
+            size="sm"
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             {[
@@ -248,17 +338,50 @@ export default function RiwayatPage() {
             ]}
           </Select>
 
-          <Input
-            className="w-full md:max-w-xs"
-            classNames={{
-              inputWrapper:
-                "bg-white/60 dark:bg-white/15 backdrop-blur-xl border border-black/10 dark:border-white/30",
-            }}
-            placeholder="Cari tiket, nama, HP..."
-            startContent={<Search className="text-gray-400" size={16} />}
-            value={searchTerm}
-            onValueChange={setSearchTerm}
-          />
+          <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 hidden md:block" />
+
+          <div className="flex items-center gap-2">
+            <Select
+              className="w-40"
+              labelPlacement="outside-left"
+              placeholder="Urutkan"
+              selectedKeys={[sortDescriptor.column]}
+              selectionMode="single"
+              size="sm"
+              onChange={(e) => {
+                if (e.target.value) {
+                  setSortDescriptor((prev) => ({
+                    ...prev,
+                    column: e.target.value,
+                  }));
+                }
+              }}
+            >
+              <SelectItem key="waktu_order">Tanggal</SelectItem>
+              <SelectItem key="customer">Nama Pelanggan</SelectItem>
+              <SelectItem key="status">Status</SelectItem>
+              <SelectItem key="ticket">Nomor Tiket</SelectItem>
+            </Select>
+
+            <Button
+              isIconOnly
+              size="sm"
+              variant="flat"
+              onClick={() =>
+                setSortDescriptor((prev) => ({
+                  ...prev,
+                  direction:
+                    prev.direction === "ascending" ? "descending" : "ascending",
+                }))
+              }
+            >
+              {sortDescriptor.direction === "ascending" ? (
+                <span className="text-lg">↑</span>
+              ) : (
+                <span className="text-lg">↓</span>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 

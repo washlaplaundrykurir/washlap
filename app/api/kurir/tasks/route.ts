@@ -206,6 +206,32 @@ export async function PUT(request: NextRequest) {
     if (status_id === 3 || status_id === 5)
       updateData.waktu_kurir_selesai = new Date().toISOString();
 
+    // SLA Calculation
+    // Only calculate if status is changing to 3 (JEMPUT) and SLA not yet set
+    if (status_id === 3) {
+      // Find the latest "Assigned" (2) log
+      const { data: assignedLog } = await supabase
+        .from("status_logs")
+        .select("created_at")
+        .eq("permintaan_id", id)
+        .eq("status_id_baru", 2)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (assignedLog) {
+        const assignedTime = new Date(assignedLog.created_at).getTime();
+        const now = Date.now();
+        const diffHours = (now - assignedTime) / (1000 * 60 * 60);
+
+        // 2 hours SLA
+        updateData.sla_status = diffHours > 2 ? "FAILED" : "MEET";
+      } else {
+        // Fallback if no assigned log found (shouldn't happen in normal flow)
+        updateData.sla_status = "MEET";
+      }
+    }
+
     const { error: updateError } = await supabase
       .from("permintaan")
       .update(updateData)
@@ -216,6 +242,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Log status change
+    console.log(`Inserting log for order ${id}, new status: ${status_id}, by: ${userId}`);
     await supabase.from("status_logs").insert({
       permintaan_id: id,
       status_id_baru: status_id,

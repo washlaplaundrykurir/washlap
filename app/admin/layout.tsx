@@ -10,7 +10,7 @@ interface JWTPayload {
   exp: number;
 }
 
-async function getUserRole() {
+async function getUserProfile() {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("sb-access-token")?.value;
 
@@ -24,11 +24,11 @@ async function getUserRole() {
     const supabase = createSupabaseAdmin();
     const { data } = await supabase
       .from("auth_users")
-      .select("role")
+      .select("role, full_name, email")
       .eq("id", decoded.sub)
       .single();
 
-    return data?.role;
+    return data;
   } catch {
     return null;
   }
@@ -39,12 +39,14 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const role = await getUserRole();
+  const user = await getUserProfile();
+  const role = user?.role;
 
   // Ensure role is one of the expected types.
   // If null (not logged in), we default to 'admin' (the layout will still render, but pages might redirect/error).
   // Ideally we'd redirect here if !role, but middleware should handle protection.
   const validRole = role === "super-admin" || role === "kurir" ? role : "admin";
+  const userName = user?.full_name || user?.email || undefined;
 
-  return <DashboardLayout role={validRole}>{children}</DashboardLayout>;
+  return <DashboardLayout role={validRole} userName={userName}>{children}</DashboardLayout>;
 }

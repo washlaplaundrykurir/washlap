@@ -91,10 +91,10 @@ export async function POST(request: NextRequest) {
     for (const type of jenisTugasArray) {
       const nomorTiket = generateTicket(type, cleanNama);
 
-      let catatanKhusus = `Produk: ${produkLayanan === "lainnya" ? produkLayananManual : produkLayanan}, Jenis: ${jenisLayanan}, Parfum: ${parfum}`;
+      let catatanKhusus = "";
 
       if (catatan && catatan.trim() !== "") {
-        catatanKhusus += ` | Catatan: ${catatan}`;
+        catatanKhusus = catatan.trim();
       }
 
       const { data: permintaanData, error: permintaanError } = await supabase
@@ -156,6 +156,13 @@ export async function POST(request: NextRequest) {
           { status: 500 },
         );
       }
+
+      // 4. Log initial status (Baru - 1)
+      await supabase.from("status_logs").insert({
+        permintaan_id: permintaanData.id,
+        status_id_baru: 1, // Baru
+        changed_by: user?.id || null, // Created by user or system
+      });
     }
 
     return NextResponse.json({
