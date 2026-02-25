@@ -518,7 +518,7 @@ export default function SelesaiPage() {
             key="pending"
             title={
               <div className="flex items-center gap-2">
-                <span>Menunggu Konfirmasi</span>
+                <span>Menunggu Nota</span>
                 {pendingOrders.length > 0 && (
                   <Chip color="warning" size="sm" variant="solid">
                     {pendingOrders.length}
@@ -532,7 +532,7 @@ export default function SelesaiPage() {
                 <Card className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">
                   <CardBody className="py-8 text-center text-gray-500">
                     <Sparkles className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    Tidak ada order yang menunggu konfirmasi
+                    Tidak ada order yang menunggu nota
                   </CardBody>
                 </Card>
               ) : (
@@ -552,12 +552,12 @@ export default function SelesaiPage() {
             </div>
           </Tab>
 
-          <Tab key="completed" title={`Selesai (${completedOrders.length})`}>
+          <Tab key="completed" title={`Konfirmasi Pengambilan (${completedOrders.length})`}>
             <div className="space-y-4 mt-4">
               {completedOrders.length === 0 ? (
                 <Card className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">
                   <CardBody className="py-8 text-center text-gray-500">
-                    Belum ada order yang selesai
+                    Belum ada order yang konfirmasi pengambilan
                   </CardBody>
                 </Card>
               ) : (
