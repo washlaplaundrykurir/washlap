@@ -32,6 +32,7 @@ export async function PUT(request: NextRequest) {
       courierId,
       nomorNota,
       waktuPenjemputan,
+      catatanKhusus,
     } = await request.json();
 
     if (!orderId) {
@@ -110,6 +111,9 @@ export async function PUT(request: NextRequest) {
       updatePermintaanData.waktu_penjemputan = new Date(
         waktuPenjemputan,
       ).toISOString();
+    }
+    if (catatanKhusus !== undefined) {
+      updatePermintaanData.catatan_khusus = catatanKhusus;
     }
 
     const { error: orderError } = await supabaseAdmin

@@ -17,6 +17,7 @@ interface Order {
   alamat_jalan: string;
   google_maps_link: string;
   waktu_order: string;
+  waktu_penjemputan: string | null;
   status_id: number;
   catatan_khusus: string;
   customers: {
@@ -136,12 +137,14 @@ export default function KurirPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("id-ID", {
+    return new Date(dateString).toLocaleString("id-ID", {
       day: "numeric",
       month: "short",
       hour: "2-digit",
       minute: "2-digit",
-    });
+      hour12: false,
+      timeZone: "UTC",
+    }).replace(/\./g, ':') + " WIB";
   };
 
   // Get complete button label based on jenis_tugas
@@ -307,9 +310,16 @@ export default function KurirPage() {
 
                   {/* Actions */}
                   <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-white/10">
-                    <span className="text-xs text-gray-400">
-                      {formatDate(order.waktu_order)}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-xs text-gray-400">
+                        {formatDate(order.waktu_order)}
+                      </span>
+                      {order.waktu_penjemputan && (
+                        <span className="text-xs font-medium text-primary flex items-center gap-1 mt-1">
+                          <Truck size={12} /> {formatDate(order.waktu_penjemputan)}
+                        </span>
+                      )}
+                    </div>
 
                     <div className="flex gap-2">
                       {/* Cancel Button */}

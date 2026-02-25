@@ -55,6 +55,7 @@ export async function GET(request: NextRequest) {
                 alamat_jalan,
                 google_maps_link,
                 waktu_order,
+                waktu_penjemputan,
                 status_id,
                 catatan_khusus,
                 courier_id,

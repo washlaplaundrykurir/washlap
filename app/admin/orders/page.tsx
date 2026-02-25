@@ -10,11 +10,11 @@ import {
   ModalBody,
   ModalFooter,
 } from "@heroui/modal";
-import { Input } from "@heroui/input";
+import { Input, Textarea } from "@heroui/input";
 import { Button } from "@heroui/button";
 import { Select, SelectItem } from "@heroui/select";
 import { useEffect, useState } from "react";
-import { Smartphone, MapPin, Sparkles, Calendar } from "lucide-react";
+import { Smartphone, MapPin, Sparkles, Calendar, Truck } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
 
@@ -122,13 +122,15 @@ export default function OrdersPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("id-ID", {
+    return new Date(dateString).toLocaleString("id-ID", {
       day: "numeric",
       month: "short",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    });
+      hour12: false,
+      timeZone: "UTC",
+    }).replace(/\./g, ':') + " WIB";
   };
 
   // State form edit
@@ -144,6 +146,7 @@ export default function OrdersPage() {
     courierId: "",
     nomorNota: "",
     waktuPenjemputan: "",
+    catatanKhusus: "",
   });
 
   // Reset form saat modal dibuka
@@ -169,6 +172,7 @@ export default function OrdersPage() {
         waktuPenjemputan: selectedOrder.waktu_penjemputan
           ? new Date(selectedOrder.waktu_penjemputan).toISOString().slice(0, 16)
           : "",
+        catatanKhusus: selectedOrder.catatan_khusus || "",
       });
     }
   }, [selectedOrder]);
@@ -320,6 +324,11 @@ export default function OrdersPage() {
                         <span className="text-gray-400 flex items-center gap-1">
                           <Calendar size={12} /> {formatDate(order.waktu_order)}
                         </span>
+                        {order.waktu_penjemputan && (
+                          <span className="text-primary flex items-center gap-1">
+                            <Truck size={12} /> {formatDate(order.waktu_penjemputan)}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </CardBody>
@@ -400,6 +409,15 @@ export default function OrdersPage() {
                   variant="flat"
                   onValueChange={(v) =>
                     setEditFormData((p) => ({ ...p, waktuPenjemputan: v }))
+                  }
+                />
+
+                <Textarea
+                  label="Catatan Khusus"
+                  value={editFormData.catatanKhusus}
+                  variant="flat"
+                  onValueChange={(v) =>
+                    setEditFormData((p) => ({ ...p, catatanKhusus: v }))
                   }
                 />
 
