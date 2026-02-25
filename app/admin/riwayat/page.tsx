@@ -114,6 +114,7 @@ export default function RiwayatPage() {
   });
 
   const [selectedLogs, setSelectedLogs] = useState<StatusLog[]>([]);
+  const [selectedOrderForLogs, setSelectedOrderForLogs] = useState<any>(null);
   const [logsLoading, setLogsLoading] = useState(false);
   const timelineModal = useDisclosure();
 
@@ -146,13 +147,14 @@ export default function RiwayatPage() {
     }
   };
 
-  const fetchLogs = async (orderId: string) => {
+  const fetchLogs = async (order: any) => {
+    setSelectedOrderForLogs(order);
     setLogsLoading(true);
     timelineModal.onOpen();
-    console.log("Fetching logs for orderId:", orderId);
+    console.log("Fetching logs for orderId:", order.id);
     try {
       // Use the new query param based endpoint
-      const response = await fetch(`/api/logs?orderId=${orderId}`);
+      const response = await fetch(`/api/logs?orderId=${order.id}`);
       const result = await response.json();
 
       if (response.ok) {
@@ -475,7 +477,7 @@ export default function RiwayatPage() {
                           size="sm"
                           startContent={<History size={14} />}
                           variant="flat"
-                          onPress={() => fetchLogs(order.id)}
+                          onPress={() => fetchLogs(order)}
                         >
                           Timeline
                         </Button>
@@ -542,6 +544,11 @@ export default function RiwayatPage() {
                       </span>
                       <span className="font-semibold text-gray-800 dark:text-white">
                         {log.status_ref?.nama_status || "Status Update"}
+                        {log.status_id_baru === 2 && selectedOrderForLogs?.courierName && (
+                          <span className="text-primary ml-1">
+                            ke {selectedOrderForLogs.courierName}
+                          </span>
+                        )}
                       </span>
                       <span className="text-xs text-gray-500">
                         {log.auth_users?.full_name
