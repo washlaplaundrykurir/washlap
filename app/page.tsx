@@ -749,7 +749,39 @@ export default function Home() {
                         minute: "2-digit",
                       })
                       : "-";
-                    const message = `Mohon proses permintaan antar/jemput dengan nomor tiket ${ticketNumbers.join(", ")}.\nNama: ${formData.nama}\nNomor: ${formData.nomorHP}\nAlamat: ${formData.alamat || "-"}\nWaktu siap jemput: ${waktuJemputStr}\nCatatan: ${formData.catatan || ""}`;
+
+                    const getProdukLayanan = () => {
+                      if (formData.produkLayanan === "cuci-setrika") return "Cuci Setrika";
+                      if (formData.produkLayanan === "cuci-lipat") return "Cuci Lipat";
+                      if (formData.produkLayanan === "lainnya") return formData.produkLayananManual || "Lainnya";
+                      return "-";
+                    };
+
+                    const getJenisLayanan = () => {
+                      if (formData.jenisLayanan === "reguler") return "Reguler";
+                      if (formData.jenisLayanan === "express") return "Express";
+                      return "-";
+                    };
+
+                    const getParfum = () => {
+                      if (formData.parfum === "soft") return "Soft";
+                      if (formData.parfum === "strong") return "Strong";
+                      if (formData.parfum === "tanpa-parfum") return "Tanpa Parfum";
+                      return "-";
+                    };
+
+                    const message = [
+                      `Mohon proses permintaan antar/jemput dengan nomor tiket ${ticketNumbers.join(", ")}.`,
+                      `Nama: ${formData.nama}`,
+                      `Nomor: ${formData.nomorHP}`,
+                      `Alamat: ${formData.alamat || "-"}`,
+                      `Waktu siap jemput: ${waktuJemputStr}`,
+                      `Produk layanan: ${getProdukLayanan()}`,
+                      `Jenis layanan: ${getJenisLayanan()}`,
+                      `Parfum: ${getParfum()}`,
+                      `Catatan: ${formData.catatan || "-"}`
+                    ].join("\n");
+
                     const encodedMessage = encodeURIComponent(message);
                     const whatsappNumber = "6287808000550";
 

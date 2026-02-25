@@ -86,11 +86,16 @@ export async function GET(request: NextRequest) {
         }
 
         // Count completed/processed tasks
+        // Asumsi status yang dihitung adalah status yang sudah diambil/diantar oleh kurir
+        // Status: 1=Baru, 2=Assigned, 3=OTW Jemput, 4=Diproses, 5=OTW Antar, 6=Selesai, 7=Batal
         if (order.status_id >= 3 && order.status_id !== 7) {
-          // 3=Jemput, 5=Antar, 6=Selesai. Exclude Batal (7) ? Req says "diselesaikan".
-          if (order.jenis_tugas === "ANTAR") rekap[courierName].antar++;
-          else if (order.jenis_tugas === "JEMPUT") rekap[courierName].jemput++;
-          rekap[courierName].total++;
+          if (order.jenis_tugas === "ANTAR" || order.jenis_tugas?.toUpperCase() === "ANTAR") {
+            rekap[courierName].antar++;
+          } else if (order.jenis_tugas === "JEMPUT" || order.jenis_tugas?.toUpperCase() === "JEMPUT") {
+            rekap[courierName].jemput++;
+          }
+
+          rekap[courierName].total = rekap[courierName].antar + rekap[courierName].jemput;
         }
       });
 

@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
 
     // Filter for unassigned orders only (courier_id is null OR status_id = 1)
     if (unassignedOnly) {
-      query = query.or("courier_id.is.null,status_id.eq.1");
+      query = query.or("courier_id.is.null,status_id.eq.1").neq("status_id", 7);
     }
 
     const { data: orders, error } = await query.order("waktu_order", {

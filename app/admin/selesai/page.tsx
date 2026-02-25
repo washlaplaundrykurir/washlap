@@ -294,6 +294,11 @@ export default function SelesaiPage() {
   const [error, setError] = useState("");
   const [notaInputs, setNotaInputs] = useState<Record<string, string>>({});
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Date filters
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
   const { showToast } = useToast();
 
   // Revert Modal State
@@ -303,16 +308,34 @@ export default function SelesaiPage() {
     customerId: string;
   } | null>(null);
 
+  // Set default dates (last month and current month)
   useEffect(() => {
-    fetchAllOrders();
+    const now = new Date();
+    // Get the first day of the previous month
+    const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+    setStartDate(firstDay.toISOString().split("T")[0]);
+    setEndDate(now.toISOString().split("T")[0]);
   }, []);
+
+  useEffect(() => {
+    if (startDate && endDate) {
+      fetchAllOrders();
+    }
+  }, [startDate, endDate]);
 
   const fetchAllOrders = async () => {
     try {
       setIsLoading(true);
+
+      const params = new URLSearchParams({
+        startDate,
+        endDate,
+      });
+
       const [jemputRes, antarRes] = await Promise.all([
-        fetch("/api/tasks?type=JEMPUT"),
-        fetch("/api/tasks?type=ANTAR"),
+        fetch(`/api/tasks?type=JEMPUT&${params.toString()}`),
+        fetch(`/api/tasks?type=ANTAR&${params.toString()}`),
       ]);
 
       const jemputData = await jemputRes.json();
@@ -422,14 +445,51 @@ export default function SelesaiPage() {
 
   return (
     <>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <CheckCircle size={24} /> Selesai
-          </h1>
-          <p className="text-gray-600 dark:text-white/70">
-            Konfirmasi dan riwayat order selesai
-          </p>
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <CheckCircle size={24} /> Selesai
+            </h1>
+            <p className="text-gray-600 dark:text-white/70">
+              Konfirmasi dan riwayat order selesai
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 p-4 bg-gray-50 dark:bg-zinc-900/50 rounded-xl border border-gray-200 dark:border-gray-800">
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <span className="text-xs font-medium text-gray-500 uppercase">
+              Filter Tanggal:
+            </span>
+            <Input
+              type="date"
+              className="w-36"
+              size="sm"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+            <span className="text-gray-400">-</span>
+            <Input
+              type="date"
+              className="w-36"
+              size="sm"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
+
+          <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 hidden md:block" />
+
+          <Button
+            color="primary"
+            isLoading={isLoading}
+            size="sm"
+            variant="flat"
+            onPress={fetchAllOrders}
+          >
+            Tampilkan
+          </Button>
         </div>
       </div>
 
