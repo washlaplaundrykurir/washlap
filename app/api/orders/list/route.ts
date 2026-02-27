@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
         catatan_khusus,
         courier_id,
         customer_id,
+        nomor_nota,
         customers:customer_id (
           id,
           nomor_hp,

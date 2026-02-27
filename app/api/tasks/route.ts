@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
         status_id,
         catatan_khusus,
         courier_id,
+        nomor_nota,
         customers:customer_id (
           id,
           nomor_hp,

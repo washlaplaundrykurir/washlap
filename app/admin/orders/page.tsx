@@ -28,6 +28,7 @@ interface Order {
   waktu_penjemputan: string | null;
   status_id: number;
   catatan_khusus: string;
+  nomor_nota: string | null;
   courier_id: string | null;
   customers: {
     id: string;
@@ -168,7 +169,7 @@ export default function OrdersPage() {
         parfum: item.parfum || "",
         statusId: selectedOrder.status_id,
         courierId: selectedOrder.courier_id || "",
-        nomorNota: "",
+        nomorNota: selectedOrder.nomor_nota || "",
         waktuPenjemputan: selectedOrder.waktu_penjemputan
           ? new Date(selectedOrder.waktu_penjemputan).toISOString().slice(0, 16)
           : "",

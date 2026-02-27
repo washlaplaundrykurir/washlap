@@ -17,11 +17,9 @@ import {
 import Link from "next/link";
 
 import { useToast } from "@/components/ToastProvider";
-import { createSupabaseClient } from "@/utils/supabase/client";
 
 export default function PromoPage() {
   const { showToast } = useToast();
-  const supabase = createSupabaseClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -64,22 +62,23 @@ export default function PromoPage() {
     if (!e.target.files || e.target.files.length === 0) return;
 
     const file = e.target.files[0];
-    const fileExt = file.name.split(".").pop();
-    const fileName = `promo-${Date.now()}.${fileExt}`;
-    const filePath = `${fileName}`;
 
     setIsUploading(true);
 
     try {
-      const { error: uploadError } = await supabase.storage
-        .from("promos")
-        .upload(filePath, file);
+      const formData = new FormData();
+      formData.append("file", file);
 
-      if (uploadError) throw uploadError;
+      const response = await fetch("/api/admin/promo/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("promos").getPublicUrl(filePath);
+      if (!response.ok) {
+        throw new Error("Gagal mengupload gambar");
+      }
+
+      const { publicUrl } = await response.json();
 
       setFormData((prev) => ({ ...prev, promo_image_url: publicUrl }));
       showToast("success", "Gambar berhasil diupload");
