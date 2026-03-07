@@ -50,7 +50,6 @@ export const adminLinks = [
     href: "/admin/reports",
     label: "Laporan",
     icon: <FileSpreadsheet size={20} />,
-    superAdminOnly: true,
   },
 ];
 

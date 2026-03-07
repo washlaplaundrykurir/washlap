@@ -187,6 +187,11 @@ export default function OrdersPage() {
       return;
     }
 
+    if (editFormData.statusId === 2 && selectedOrder.jenis_tugas === "JEMPUT" && !editFormData.nomorNota?.trim()) {
+      showToast("error", "Nomor Nota wajib diisi untuk penugasan JEMPUT!");
+      return;
+    }
+
     try {
       const response = await fetch("/api/orders/update", {
         method: "PUT",
@@ -489,11 +494,11 @@ export default function OrdersPage() {
                         ))}
                       </Select>
 
-                      {/* Nota input for ANTAR orders when assigning */}
-                      {selectedOrder?.jenis_tugas === "ANTAR" && (
+                      {/* Nota input for JEMPUT orders when assigning */}
+                      {selectedOrder?.jenis_tugas === "JEMPUT" && (
                         <Input
-                          label="Nomor Nota (Opsional)"
-                          placeholder="Bisa diisi nanti di halaman Selesai"
+                          label="Nomor Nota (Wajib)"
+                          placeholder="Masukkan nomor nota"
                           value={editFormData.nomorNota}
                           variant="flat"
                           onValueChange={(v) =>

@@ -64,7 +64,7 @@ const PendingCard = ({
   notaInputs: Record<string, string>;
   setNotaInputs: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   actionLoading: string | null;
-  confirmOrder: (orderId: string, hasExistingNota: boolean) => void;
+  confirmOrder: (orderId: string, hasExistingNota: boolean, jenisTugas: string) => void;
   revertOrder: (orderId: string, customerId: string) => void;
   formatDate: (date: string) => string;
 }) => (
@@ -143,44 +143,8 @@ const PendingCard = ({
 
         {/* Action Section - Different for JEMPUT vs ANTAR */}
         <div className="flex gap-2 items-center pt-2 border-t border-yellow-200 dark:border-yellow-500/20">
-          {order.jenis_tugas === "JEMPUT" ? (
-            /* JEMPUT: Need to input nota */
-            <>
-              <Input
-                className="flex-1"
-                placeholder="Masukkan nomor nota"
-                size="sm"
-                value={notaInputs[order.id] || ""}
-                variant="flat"
-                onValueChange={(v) =>
-                  setNotaInputs((prev) => ({ ...prev, [order.id]: v }))
-                }
-              />
-              <Button
-                isIconOnly
-                color="warning"
-                isLoading={actionLoading === order.id}
-                size="sm"
-                title="Kembalikan ke Ditugaskan"
-                variant="flat"
-                onClick={() =>
-                  order.customers?.id &&
-                  revertOrder(order.id, order.customers.id)
-                }
-              >
-                <RotateCcw size={16} />
-              </Button>
-              <Button
-                color="success"
-                isLoading={actionLoading === order.id}
-                size="sm"
-                onClick={() => confirmOrder(order.id, false)}
-              >
-                <Check size={16} /> Selesai
-              </Button>
-            </>
-          ) : (
-            /* ANTAR: Input nota if missing, otherwise show it */
+          {order.jenis_tugas === "ANTAR" ? (
+            /* ANTAR: Need to input nota if missing, otherwise show it */
             <>
               {order.nomor_nota ? (
                 <span className="text-sm text-gray-600 dark:text-white/70 flex-1 flex items-center gap-1">
@@ -217,7 +181,37 @@ const PendingCard = ({
                 color="success"
                 isLoading={actionLoading === order.id}
                 size="sm"
-                onClick={() => confirmOrder(order.id, !!order.nomor_nota)}
+                onClick={() => confirmOrder(order.id, !!order.nomor_nota, order.jenis_tugas)}
+              >
+                <Check size={16} /> Selesai
+              </Button>
+            </>
+          ) : (
+            /* JEMPUT: Nota already filled, show it */
+            <>
+              <span className="text-sm text-gray-600 dark:text-white/70 flex-1 flex items-center gap-1">
+                <FileText size={14} /> Nota:{" "}
+                <strong>{order.nomor_nota || "-"}</strong>
+              </span>
+              <Button
+                isIconOnly
+                color="warning"
+                isLoading={actionLoading === order.id}
+                size="sm"
+                title="Kembalikan ke Ditugaskan"
+                variant="flat"
+                onClick={() =>
+                  order.customers?.id &&
+                  revertOrder(order.id, order.customers.id)
+                }
+              >
+                <RotateCcw size={16} />
+              </Button>
+              <Button
+                color="success"
+                isLoading={actionLoading === order.id}
+                size="sm"
+                onClick={() => confirmOrder(order.id, true, order.jenis_tugas)}
               >
                 <Check size={16} /> Selesai
               </Button>
@@ -355,11 +349,11 @@ export default function SelesaiPage() {
     }
   };
 
-  const confirmOrder = async (orderId: string, hasExistingNota: boolean) => {
+  const confirmOrder = async (orderId: string, hasExistingNota: boolean, jenisTugas: string) => {
     const nota = notaInputs[orderId]?.trim();
 
-    // JEMPUT orders require nota input
-    if (!hasExistingNota && !nota) {
+    // ANTAR orders require nota input
+    if (jenisTugas === "ANTAR" && !hasExistingNota && !nota) {
       showToast("error", "Nomor nota harus diisi!");
 
       return;

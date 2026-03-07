@@ -57,16 +57,12 @@ export async function PUT(request: NextRequest) {
     }
 
     // Log status change
-    if (userId) {
-      console.log("Confirm Route: Inserting Log", { id, userId });
-      await supabase.from("status_logs").insert({
-        permintaan_id: id,
-        status_id_baru: 6,
-        changed_by: userId,
-      });
-    } else {
-      console.warn("Confirm Route: No UserId, skipping log");
-    }
+    console.log("Confirm Route: Inserting Log", { id, userId });
+    await supabase.from("status_logs").insert({
+      permintaan_id: id,
+      status_id_baru: 6,
+      changed_by: userId || null,
+    });
 
     return NextResponse.json({
       success: true,
