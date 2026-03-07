@@ -187,8 +187,8 @@ export default function OrdersPage() {
       return;
     }
 
-    if (editFormData.statusId === 2 && selectedOrder.jenis_tugas === "JEMPUT" && !editFormData.nomorNota?.trim()) {
-      showToast("error", "Nomor Nota wajib diisi untuk penugasan JEMPUT!");
+    if (editFormData.statusId === 2 && selectedOrder.jenis_tugas === "ANTAR" && !editFormData.nomorNota?.trim()) {
+      showToast("error", "Nomor Nota wajib diisi untuk penugasan ANTAR!");
       return;
     }
 
@@ -494,8 +494,8 @@ export default function OrdersPage() {
                         ))}
                       </Select>
 
-                      {/* Nota input for JEMPUT orders when assigning */}
-                      {selectedOrder?.jenis_tugas === "JEMPUT" && (
+                      {/* Nota input for ANTAR orders when assigning */}
+                      {selectedOrder?.jenis_tugas === "ANTAR" && (
                         <Input
                           label="Nomor Nota (Wajib)"
                           placeholder="Masukkan nomor nota"

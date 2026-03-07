@@ -64,7 +64,7 @@ const PendingCard = ({
   notaInputs: Record<string, string>;
   setNotaInputs: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   actionLoading: string | null;
-  confirmOrder: (orderId: string, hasExistingNota: boolean, jenisTugas: string) => void;
+  confirmOrder: (orderId: string, hasExistingNota: boolean) => void;
   revertOrder: (orderId: string, customerId: string) => void;
   formatDate: (date: string) => string;
 }) => (
@@ -141,28 +141,20 @@ const PendingCard = ({
           )}
         </div>
 
-        {/* Action Section - Different for JEMPUT vs ANTAR */}
+        {/* Action Section */}
         <div className="flex gap-2 items-center pt-2 border-t border-yellow-200 dark:border-yellow-500/20">
-          {order.jenis_tugas === "ANTAR" ? (
-            /* ANTAR: Need to input nota if missing, otherwise show it */
+          {!order.nomor_nota ? (
             <>
-              {order.nomor_nota ? (
-                <span className="text-sm text-gray-600 dark:text-white/70 flex-1 flex items-center gap-1">
-                  <FileText size={14} /> Nota:{" "}
-                  <strong>{order.nomor_nota}</strong>
-                </span>
-              ) : (
-                <Input
-                  className="flex-1"
-                  placeholder="Masukkan nomor nota"
-                  size="sm"
-                  value={notaInputs[order.id] || ""}
-                  variant="flat"
-                  onValueChange={(v) =>
-                    setNotaInputs((prev) => ({ ...prev, [order.id]: v }))
-                  }
-                />
-              )}
+              <Input
+                className="flex-1"
+                placeholder="Masukkan nomor nota"
+                size="sm"
+                value={notaInputs[order.id] || ""}
+                variant="flat"
+                onValueChange={(v) =>
+                  setNotaInputs((prev) => ({ ...prev, [order.id]: v }))
+                }
+              />
               <Button
                 isIconOnly
                 color="warning"
@@ -181,17 +173,16 @@ const PendingCard = ({
                 color="success"
                 isLoading={actionLoading === order.id}
                 size="sm"
-                onClick={() => confirmOrder(order.id, !!order.nomor_nota, order.jenis_tugas)}
+                onClick={() => confirmOrder(order.id, false)}
               >
                 <Check size={16} /> Selesai
               </Button>
             </>
           ) : (
-            /* JEMPUT: Nota already filled, show it */
             <>
               <span className="text-sm text-gray-600 dark:text-white/70 flex-1 flex items-center gap-1">
                 <FileText size={14} /> Nota:{" "}
-                <strong>{order.nomor_nota || "-"}</strong>
+                <strong>{order.nomor_nota}</strong>
               </span>
               <Button
                 isIconOnly
@@ -211,7 +202,7 @@ const PendingCard = ({
                 color="success"
                 isLoading={actionLoading === order.id}
                 size="sm"
-                onClick={() => confirmOrder(order.id, true, order.jenis_tugas)}
+                onClick={() => confirmOrder(order.id, true)}
               >
                 <Check size={16} /> Selesai
               </Button>
@@ -223,68 +214,13 @@ const PendingCard = ({
   </Card>
 );
 
-const CompletedCard = ({
-  order,
-  formatDate,
-}: {
-  order: Order;
-  formatDate: (date: string) => string;
-}) => (
-  <Card className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">
-    <CardBody className="p-4">
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-bold text-gray-900 dark:text-white">
-            {order.nomor_tiket}
-          </span>
-          <Chip color="success" size="sm">
-            Selesai
-          </Chip>
-          <Chip
-            color={order.jenis_tugas === "JEMPUT" ? "secondary" : "primary"}
-            size="sm"
-            variant="flat"
-          >
-            {order.jenis_tugas}
-          </Chip>
-          {order.nomor_nota && (
-            <Chip color="default" size="sm" variant="bordered">
-              <FileText className="inline mr-1" size={12} /> {order.nomor_nota}
-            </Chip>
-          )}
-        </div>
-        <p className="text-xs text-gray-400">
-          {formatDate(order.waktu_selesai || order.waktu_order)}
-        </p>
-      </div>
-      <p className="text-sm text-gray-600 dark:text-white/70 mb-1 flex items-center gap-1">
-        <User size={14} /> {order.customers?.nama_terakhir || "-"} •{" "}
-        {order.customers?.nomor_hp}
-      </p>
-      <p className="text-sm text-gray-500 dark:text-white/50 mb-1 flex items-center gap-1">
-        <MapPin size={14} /> {order.alamat_jalan}
-      </p>
-      <p className="text-sm text-gray-500 dark:text-white/50 flex items-center gap-1">
-        <Truck size={14} /> Kurir:{" "}
-        {order.auth_users?.full_name || order.auth_users?.email || "-"}
-      </p>
-      {order.google_maps_link && (
-        <Link
-          className="text-xs text-primary hover:underline mt-1 inline-block"
-          href={order.google_maps_link}
-          target="_blank"
-        >
-          Buka Maps →
-        </Link>
-      )}
-    </CardBody>
-  </Card>
-);
+
 
 export default function SelesaiPage() {
-  const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
-  const [completedOrders, setCompletedOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [menungguNotaOrders, setMenungguNotaOrders] = useState<Order[]>([]);
+  const [konfirmasiOrders, setKonfirmasiOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
   const [error, setError] = useState("");
   const [notaInputs, setNotaInputs] = useState<Record<string, string>>({});
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -312,15 +248,15 @@ export default function SelesaiPage() {
     setEndDate(now.toISOString().split("T")[0]);
   }, []);
 
-  useEffect(() => {
-    if (startDate && endDate) {
-      fetchAllOrders();
-    }
-  }, [startDate, endDate]);
-
   const fetchAllOrders = async () => {
+    if (!startDate || !endDate) {
+      showToast("error", "Silakan pilih rentang tanggal terlebih dahulu");
+      return;
+    }
+
     try {
       setIsLoading(true);
+      setHasFetched(true);
 
       const params = new URLSearchParams({
         startDate,
@@ -337,11 +273,16 @@ export default function SelesaiPage() {
 
       const allOrders = [...(jemputData.data || []), ...(antarData.data || [])];
 
-      // Separate pending confirmation (status 3 = Sudah Jemput, 5 = Sudah Antar) and completed (status 6)
-      setPendingOrders(
-        allOrders.filter((o: Order) => o.status_id === 3 || o.status_id === 5),
+      const pending = allOrders.filter((o: Order) => o.status_id === 3 || o.status_id === 5);
+
+      setMenungguNotaOrders(
+        pending.filter((o: Order) => !o.nomor_nota)
       );
-      setCompletedOrders(allOrders.filter((o: Order) => o.status_id === 6));
+
+      setKonfirmasiOrders(
+        pending.filter((o: Order) => !!o.nomor_nota)
+      );
+
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error");
     } finally {
@@ -349,11 +290,10 @@ export default function SelesaiPage() {
     }
   };
 
-  const confirmOrder = async (orderId: string, hasExistingNota: boolean, jenisTugas: string) => {
+  const confirmOrder = async (orderId: string, hasExistingNota: boolean) => {
     const nota = notaInputs[orderId]?.trim();
 
-    // ANTAR orders require nota input
-    if (jenisTugas === "ANTAR" && !hasExistingNota && !nota) {
+    if (!hasExistingNota && !nota) {
       showToast("error", "Nomor nota harus diisi!");
 
       return;
@@ -499,6 +439,14 @@ export default function SelesaiPage() {
         <div className="flex justify-center py-20">
           <Spinner size="lg" />
         </div>
+      ) : !hasFetched ? (
+        <Card className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">
+          <CardBody className="py-20 text-center text-gray-500">
+            <Sparkles className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">Pilih Rentang Tanggal</h3>
+            <p>Silakan pilih rentang tanggal dan klik <b>Tampilkan</b> untuk memuat data pesanan.</p>
+          </CardBody>
+        </Card>
       ) : (
         <Tabs
           aria-label="Selesai tabs"
@@ -513,16 +461,16 @@ export default function SelesaiPage() {
             title={
               <div className="flex items-center gap-2">
                 <span>Menunggu Nota</span>
-                {pendingOrders.length > 0 && (
+                {menungguNotaOrders.length > 0 && (
                   <Chip color="warning" size="sm" variant="solid">
-                    {pendingOrders.length}
+                    {menungguNotaOrders.length}
                   </Chip>
                 )}
               </div>
             }
           >
             <div className="space-y-4 mt-4">
-              {pendingOrders.length === 0 ? (
+              {menungguNotaOrders.length === 0 ? (
                 <Card className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">
                   <CardBody className="py-8 text-center text-gray-500">
                     <Sparkles className="w-8 h-8 text-gray-400 mx-auto mb-2" />
@@ -530,7 +478,7 @@ export default function SelesaiPage() {
                   </CardBody>
                 </Card>
               ) : (
-                pendingOrders.map((order) => (
+                menungguNotaOrders.map((order) => (
                   <PendingCard
                     key={order.id}
                     actionLoading={actionLoading}
@@ -546,20 +494,37 @@ export default function SelesaiPage() {
             </div>
           </Tab>
 
-          <Tab key="completed" title={`Konfirmasi Pengambilan (${completedOrders.length})`}>
+          <Tab
+            key="konfirmasi"
+            title={
+              <div className="flex items-center gap-2">
+                <span>Konfirmasi Pengambilan</span>
+                {konfirmasiOrders.length > 0 && (
+                  <Chip color="primary" size="sm" variant="solid">
+                    {konfirmasiOrders.length}
+                  </Chip>
+                )}
+              </div>
+            }
+          >
             <div className="space-y-4 mt-4">
-              {completedOrders.length === 0 ? (
+              {konfirmasiOrders.length === 0 ? (
                 <Card className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">
                   <CardBody className="py-8 text-center text-gray-500">
-                    Belum ada order yang konfirmasi pengambilan
+                    Belum ada order yang menunggu konfirmasi pengambilan
                   </CardBody>
                 </Card>
               ) : (
-                completedOrders.map((order) => (
-                  <CompletedCard
+                konfirmasiOrders.map((order) => (
+                  <PendingCard
                     key={order.id}
+                    actionLoading={actionLoading}
+                    confirmOrder={confirmOrder}
                     formatDate={formatDate}
+                    notaInputs={notaInputs}
                     order={order}
+                    revertOrder={initiateRevert}
+                    setNotaInputs={setNotaInputs}
                   />
                 ))
               )}
