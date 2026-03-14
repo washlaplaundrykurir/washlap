@@ -60,16 +60,27 @@ export default function AdminPage() {
     catatan: "",
   });
 
-
-
   const fetchUser = async () => {
     try {
+      const cachedUser = localStorage.getItem("washlap_user_data");
+      if (cachedUser) {
+        const { user, timestamp } = JSON.parse(cachedUser);
+        if (Date.now() - timestamp < 3600000 && user?.full_name) {
+          setUserName(user.full_name);
+          return;
+        }
+      }
+
       const res = await fetch("/api/users/me");
 
       if (res.ok) {
         const data = await res.json();
 
         setUserName(data.user?.full_name || "");
+        localStorage.setItem(
+          "washlap_user_data",
+          JSON.stringify({ user: data.user, timestamp: Date.now() }),
+        );
       }
     } catch {
       // Ignore
@@ -285,7 +296,11 @@ export default function AdminPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           Dashboard Admin
-          {userName && <span className="text-lg font-normal text-gray-500 dark:text-gray-400">({userName})</span>}
+          {userName && (
+            <span className="text-lg font-normal text-gray-500 dark:text-gray-400">
+              ({userName})
+            </span>
+          )}
         </h1>
         <Button
           color="primary"

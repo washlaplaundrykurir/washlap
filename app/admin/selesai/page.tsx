@@ -181,8 +181,7 @@ const PendingCard = ({
           ) : (
             <>
               <span className="text-sm text-gray-600 dark:text-white/70 flex-1 flex items-center gap-1">
-                <FileText size={14} /> Nota:{" "}
-                <strong>{order.nomor_nota}</strong>
+                <FileText size={14} /> Nota: <strong>{order.nomor_nota}</strong>
               </span>
               <Button
                 isIconOnly
@@ -214,8 +213,6 @@ const PendingCard = ({
   </Card>
 );
 
-
-
 export default function SelesaiPage() {
   const [menungguNotaOrders, setMenungguNotaOrders] = useState<Order[]>([]);
   const [konfirmasiOrders, setKonfirmasiOrders] = useState<Order[]>([]);
@@ -224,6 +221,14 @@ export default function SelesaiPage() {
   const [error, setError] = useState("");
   const [notaInputs, setNotaInputs] = useState<Record<string, string>>({});
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Search and Pagination
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(50);
+  const [total, setTotal] = useState(0);
+  const [totalMenungguNotaCount, setTotalMenungguNotaCount] = useState(0);
+  const [totalKonfirmasiCount, setTotalKonfirmasiCount] = useState(0);
 
   // Date filters
   const [startDate, setStartDate] = useState("");
@@ -238,15 +243,22 @@ export default function SelesaiPage() {
     customerId: string;
   } | null>(null);
 
-  // Set default dates (last month and current month)
+  // Set default dates (8 days range including today)
   useEffect(() => {
     const now = new Date();
-    // Get the first day of the previous month
-    const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const firstDay = new Date(now);
+    firstDay.setDate(now.getDate() - 7); // 8 days including today
 
     setStartDate(firstDay.toISOString().split("T")[0]);
     setEndDate(now.toISOString().split("T")[0]);
   }, []);
+
+  // Fetch when page changes
+  useEffect(() => {
+    if (hasFetched) {
+      fetchAllOrders();
+    }
+  }, [page]);
 
   const fetchAllOrders = async () => {
     if (!startDate || !endDate) {
@@ -261,28 +273,32 @@ export default function SelesaiPage() {
       const params = new URLSearchParams({
         startDate,
         endDate,
+        dateField: "waktu_kurir_selesai",
+        status: "selesai",
+        page: page.toString(),
+        pageSize: pageSize.toString(),
       });
 
-      const [jemputRes, antarRes] = await Promise.all([
-        fetch(`/api/tasks?type=JEMPUT&${params.toString()}`),
-        fetch(`/api/tasks?type=ANTAR&${params.toString()}`),
-      ]);
+      if (search) {
+        params.append("search", search);
+      }
 
-      const jemputData = await jemputRes.json();
-      const antarData = await antarRes.json();
+      const response = await fetch(`/api/tasks?${params.toString()}`);
+      const result = await response.json();
 
-      const allOrders = [...(jemputData.data || []), ...(antarData.data || [])];
+      if (!response.ok) throw new Error(result.error);
 
-      const pending = allOrders.filter((o: Order) => o.status_id === 3 || o.status_id === 5);
+      const allOrders = result.data || [];
+      const totalCount = result.total || 0;
+      const totalNoNota = result.totalNoNota || 0;
+      const totalWithNota = result.totalWithNota || 0;
 
-      setMenungguNotaOrders(
-        pending.filter((o: Order) => !o.nomor_nota)
-      );
+      setMenungguNotaOrders(allOrders.filter((o: Order) => !o.nomor_nota));
+      setKonfirmasiOrders(allOrders.filter((o: Order) => !!o.nomor_nota));
 
-      setKonfirmasiOrders(
-        pending.filter((o: Order) => !!o.nomor_nota)
-      );
-
+      setTotal(totalCount);
+      setTotalMenungguNotaCount(totalNoNota);
+      setTotalKonfirmasiCount(totalWithNota);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error");
     } finally {
@@ -391,36 +407,66 @@ export default function SelesaiPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 p-4 bg-gray-50 dark:bg-zinc-900/50 rounded-xl border border-gray-200 dark:border-gray-800">
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <span className="text-xs font-medium text-gray-500 uppercase">
-              Filter Tanggal:
-            </span>
-            <Input
-              type="date"
-              className="w-36"
-              size="sm"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-            <span className="text-gray-400">-</span>
-            <Input
-              type="date"
-              className="w-36"
-              size="sm"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4 p-4 bg-gray-50 dark:bg-zinc-900/50 rounded-xl border border-gray-200 dark:border-gray-800">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
+            <div className="flex flex-col gap-1 min-w-fit">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                Filter Tanggal
+              </span>
+              <span className="text-[10px] text-gray-400 leading-none mb-1">
+                (Berdasarkan waktu diselesaikan kurir)
+              </span>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="date"
+                  className="w-full sm:w-36"
+                  size="sm"
+                  variant="bordered"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+                <span className="text-gray-400 font-bold">-</span>
+                <Input
+                  type="date"
+                  className="w-full sm:w-36"
+                  size="sm"
+                  variant="bordered"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="w-px h-12 bg-gray-300 dark:bg-gray-700 hidden sm:block" />
+
+            <div className="flex flex-col gap-1 flex-1">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                Pencarian
+              </span>
+              <div className="flex items-center gap-2">
+                <Input
+                  className="w-full lg:w-64"
+                  placeholder="Cari Tiket/Nota..."
+                  size="sm"
+                  variant="bordered"
+                  value={search}
+                  onValueChange={setSearch}
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 hidden md:block" />
+          <div className="w-px h-12 bg-gray-300 dark:bg-gray-700 hidden lg:block" />
 
           <Button
             color="primary"
             isLoading={isLoading}
-            size="sm"
-            variant="flat"
-            onPress={fetchAllOrders}
+            size="md"
+            className="w-full lg:w-auto font-bold px-8"
+            onPress={() => {
+              setPage(1);
+              fetchAllOrders();
+            }}
           >
             Tampilkan
           </Button>
@@ -443,94 +489,132 @@ export default function SelesaiPage() {
         <Card className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">
           <CardBody className="py-20 text-center text-gray-500">
             <Sparkles className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">Pilih Rentang Tanggal</h3>
-            <p>Silakan pilih rentang tanggal dan klik <b>Tampilkan</b> untuk memuat data pesanan.</p>
+            <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">
+              Pilih Rentang Tanggal
+            </h3>
+            <p>
+              Silakan pilih rentang tanggal dan klik <b>Tampilkan</b> untuk
+              memuat data pesanan.
+            </p>
           </CardBody>
         </Card>
       ) : (
-        <Tabs
-          aria-label="Selesai tabs"
-          classNames={{
-            tabList: "bg-white/60 dark:bg-white/15 backdrop-blur-xl",
-          }}
-          color="primary"
-          variant="bordered"
-        >
-          <Tab
-            key="pending"
-            title={
-              <div className="flex items-center gap-2">
-                <span>Menunggu Nota</span>
-                {menungguNotaOrders.length > 0 && (
-                  <Chip color="warning" size="sm" variant="solid">
-                    {menungguNotaOrders.length}
-                  </Chip>
+        <>
+          <Tabs
+            aria-label="Selesai tabs"
+            classNames={{
+              tabList: "bg-white/60 dark:bg-white/15 backdrop-blur-xl",
+            }}
+            color="primary"
+            variant="bordered"
+          >
+            <Tab
+              key="pending"
+              title={
+                <div className="flex items-center gap-2">
+                  <span>Menunggu Nota</span>
+                  {totalMenungguNotaCount > 0 && (
+                    <Chip color="warning" size="sm" variant="solid">
+                      {totalMenungguNotaCount}
+                    </Chip>
+                  )}
+                </div>
+              }
+            >
+              <div className="space-y-4 mt-4">
+                {menungguNotaOrders.length === 0 ? (
+                  <Card className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">
+                    <CardBody className="py-8 text-center text-gray-500">
+                      <Sparkles className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                      Tidak ada order yang menunggu nota
+                    </CardBody>
+                  </Card>
+                ) : (
+                  menungguNotaOrders.map((order) => (
+                    <PendingCard
+                      key={order.id}
+                      actionLoading={actionLoading}
+                      confirmOrder={confirmOrder}
+                      formatDate={formatDate}
+                      notaInputs={notaInputs}
+                      order={order}
+                      revertOrder={initiateRevert}
+                      setNotaInputs={setNotaInputs}
+                    />
+                  ))
                 )}
               </div>
-            }
-          >
-            <div className="space-y-4 mt-4">
-              {menungguNotaOrders.length === 0 ? (
-                <Card className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">
-                  <CardBody className="py-8 text-center text-gray-500">
-                    <Sparkles className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    Tidak ada order yang menunggu nota
-                  </CardBody>
-                </Card>
-              ) : (
-                menungguNotaOrders.map((order) => (
-                  <PendingCard
-                    key={order.id}
-                    actionLoading={actionLoading}
-                    confirmOrder={confirmOrder}
-                    formatDate={formatDate}
-                    notaInputs={notaInputs}
-                    order={order}
-                    revertOrder={initiateRevert}
-                    setNotaInputs={setNotaInputs}
-                  />
-                ))
-              )}
-            </div>
-          </Tab>
+            </Tab>
 
-          <Tab
-            key="konfirmasi"
-            title={
-              <div className="flex items-center gap-2">
-                <span>Konfirmasi Pengambilan</span>
-                {konfirmasiOrders.length > 0 && (
-                  <Chip color="primary" size="sm" variant="solid">
-                    {konfirmasiOrders.length}
-                  </Chip>
+            <Tab
+              key="konfirmasi"
+              title={
+                <div className="flex items-center gap-2">
+                  <span>Konfirmasi Pengambilan</span>
+                  {totalKonfirmasiCount > 0 && (
+                    <Chip color="primary" size="sm" variant="solid">
+                      {totalKonfirmasiCount}
+                    </Chip>
+                  )}
+                </div>
+              }
+            >
+              <div className="space-y-4 mt-4">
+                {konfirmasiOrders.length === 0 ? (
+                  <Card className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">
+                    <CardBody className="py-8 text-center text-gray-500">
+                      Belum ada order yang menunggu konfirmasi pengambilan
+                    </CardBody>
+                  </Card>
+                ) : (
+                  konfirmasiOrders.map((order) => (
+                    <PendingCard
+                      key={order.id}
+                      actionLoading={actionLoading}
+                      confirmOrder={confirmOrder}
+                      formatDate={formatDate}
+                      notaInputs={notaInputs}
+                      order={order}
+                      revertOrder={initiateRevert}
+                      setNotaInputs={setNotaInputs}
+                    />
+                  ))
                 )}
               </div>
-            }
-          >
-            <div className="space-y-4 mt-4">
-              {konfirmasiOrders.length === 0 ? (
-                <Card className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">
-                  <CardBody className="py-8 text-center text-gray-500">
-                    Belum ada order yang menunggu konfirmasi pengambilan
-                  </CardBody>
-                </Card>
-              ) : (
-                konfirmasiOrders.map((order) => (
-                  <PendingCard
-                    key={order.id}
-                    actionLoading={actionLoading}
-                    confirmOrder={confirmOrder}
-                    formatDate={formatDate}
-                    notaInputs={notaInputs}
-                    order={order}
-                    revertOrder={initiateRevert}
-                    setNotaInputs={setNotaInputs}
-                  />
-                ))
-              )}
+            </Tab>
+          </Tabs>
+
+          {total > 0 && (
+            <div className="flex flex-col items-center mt-6 gap-4">
+              <div className="flex justify-center gap-2">
+                <Button
+                  isDisabled={page === 1 || isLoading}
+                  size="sm"
+                  variant="flat"
+                  onPress={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  Sebelumnya
+                </Button>
+                <div className="flex items-center px-4 text-sm font-medium">
+                  Halaman {page} dari {Math.max(1, Math.ceil(total / pageSize))}
+                </div>
+                <Button
+                  isDisabled={page >= Math.ceil(total / pageSize) || isLoading}
+                  size="sm"
+                  variant="flat"
+                  onPress={() => setPage((p) => p + 1)}
+                >
+                  Selanjutnya
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500">
+                Menampilkan{" "}
+                {menungguNotaOrders.length + konfirmasiOrders.length} dari{" "}
+                {total} data
+              </p>
             </div>
-          </Tab>
-        </Tabs>
+          )}
+        </>
       )}
 
       {/* Confirmation Modal */}

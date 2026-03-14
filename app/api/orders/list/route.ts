@@ -49,15 +49,16 @@ export async function GET(request: NextRequest) {
     // Date filtering
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+    const dateField = searchParams.get("dateField") || "waktu_order";
 
     if (startDate) {
-      query = query.gte("waktu_order", startDate);
+      query = query.gte(dateField, startDate);
     }
     if (endDate) {
       // Add one day to include the end date fully
       const nextDay = new Date(endDate);
       nextDay.setDate(nextDay.getDate() + 1);
-      query = query.lt("waktu_order", nextDay.toISOString().split("T")[0]);
+      query = query.lt(dateField, nextDay.toISOString().split("T")[0]);
     }
 
     // Filter for unassigned orders only (courier_id is null OR status_id = 1)
@@ -106,10 +107,10 @@ export async function GET(request: NextRequest) {
         groupedOrders[courierId] = {
           courier: courierData
             ? {
-              id: courierData.id,
-              name: courierData.full_name || courierData.email,
-              email: courierData.email,
-            }
+                id: courierData.id,
+                name: courierData.full_name || courierData.email,
+                email: courierData.email,
+              }
             : null,
           orders: [],
         };

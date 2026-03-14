@@ -104,7 +104,9 @@ export async function PUT(request: NextRequest) {
       updatePermintaanData.customer_id = finalCustomerId;
     }
 
-    if (courierId !== undefined) updatePermintaanData.courier_id = courierId;
+    if (courierId !== undefined) {
+      updatePermintaanData.courier_id = courierId === "" ? null : courierId;
+    }
     if (nomorNota !== undefined && nomorNota !== "")
       updatePermintaanData.nomor_nota = nomorNota;
     if (waktuPenjemputan !== undefined && waktuPenjemputan !== "") {

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 import { createSupabaseAdmin } from "@/utils/supabase/server";
+import { calculateSLANota } from "@/lib/sla-helper";
 
 // PUT - Confirm order with nota number
 export async function PUT(request: NextRequest) {
@@ -17,14 +18,32 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Fetch current order data to get waktu_kurir_selesai
+    const { data: order } = await supabase
+      .from("permintaan")
+      .select("waktu_kurir_selesai")
+      .eq("id", id)
+      .single();
+
+    const waktuSelesai = new Date().toISOString();
+
     // Build update data - only include nomor_nota if provided (for JEMPUT orders)
     const updateData: Record<string, unknown> = {
       status_id: 6,
-      waktu_selesai: new Date().toISOString(),
+      waktu_selesai: waktuSelesai,
     };
 
     if (nomor_nota) {
       updateData.nomor_nota = nomor_nota;
+    }
+
+    if (order?.waktu_kurir_selesai) {
+      const slaNota = calculateSLANota(order.waktu_kurir_selesai, waktuSelesai);
+
+      if (slaNota) {
+        updateData.sla_nota_menit = slaNota.minutes;
+        updateData.sla_nota_status = slaNota.status;
+      }
     }
 
     // Update order: change status to 6 (Selesai)

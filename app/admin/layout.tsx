@@ -48,5 +48,9 @@ export default async function AdminLayout({
   const validRole = role === "super-admin" || role === "kurir" ? role : "admin";
   const userName = user?.full_name || user?.email || undefined;
 
-  return <DashboardLayout role={validRole} userName={userName}>{children}</DashboardLayout>;
+  return (
+    <DashboardLayout role={validRole} userName={userName}>
+      {children}
+    </DashboardLayout>
+  );
 }

@@ -5,7 +5,14 @@ import { Chip } from "@heroui/chip";
 import { Spinner } from "@heroui/spinner";
 import { Input } from "@heroui/input";
 import { useEffect, useState } from "react";
-import { ScrollText, Search, User, MapPin, Truck } from "lucide-react";
+import {
+  ScrollText,
+  Search,
+  User,
+  MapPin,
+  Truck,
+  Sparkles,
+} from "lucide-react";
 import Link from "next/link";
 import {
   Modal,
@@ -97,21 +104,25 @@ interface StatusLog {
 
 export default function RiwayatPage() {
   const [data, setData] = useState<CourierGroup[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
   const [error, setError] = useState("");
   // const [totalOrders, setTotalOrders] = useState(0); // Unused variable
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Date Filter State (Default: Last 8 days)
-  const [startDate, setStartDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 8);
-    return d.toISOString().split("T")[0];
-  });
-  const [endDate, setEndDate] = useState(() => {
-    return new Date().toISOString().split("T")[0];
-  });
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  useEffect(() => {
+    const now = new Date();
+    const firstDay = new Date(now);
+    firstDay.setDate(now.getDate() - 7); // 8 days including today
+
+    setStartDate(firstDay.toISOString().split("T")[0]);
+    setEndDate(now.toISOString().split("T")[0]);
+  }, []);
 
   const [selectedLogs, setSelectedLogs] = useState<StatusLog[]>([]);
   const [selectedOrderForLogs, setSelectedOrderForLogs] = useState<any>(null);
@@ -120,16 +131,19 @@ export default function RiwayatPage() {
 
   const [reassignLoading, setReassignLoading] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchOrders();
-  }, [startDate, endDate]); // Refetch when dates change
-
   const fetchOrders = async () => {
+    if (!startDate || !endDate) {
+      return;
+    }
+
     try {
       setIsLoading(true);
+      setError("");
+      setHasFetched(true);
       const params = new URLSearchParams();
       if (startDate) params.append("startDate", startDate);
       if (endDate) params.append("endDate", endDate);
+      params.append("dateField", "waktu_penjemputan");
 
       const response = await fetch(`/api/orders/list?${params.toString()}`);
       const result = await response.json();
@@ -300,89 +314,117 @@ export default function RiwayatPage() {
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 p-4 bg-gray-50 dark:bg-zinc-900/50 rounded-xl border border-gray-200 dark:border-gray-800">
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <span className="text-xs font-medium text-gray-500 uppercase">
-              Filter Tanggal:
-            </span>
-            <Input
-              type="date"
-              className="w-36"
-              size="sm"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-            <span className="text-gray-400">-</span>
-            <Input
-              type="date"
-              className="w-36"
-              size="sm"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </div>
+        <div className="flex flex-col xl:flex-row xl:items-end gap-4 p-4 bg-gray-50 dark:bg-zinc-900/50 rounded-xl border border-gray-200 dark:border-gray-800">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-1">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                Filter Tanggal
+              </span>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="date"
+                  className="w-full"
+                  size="sm"
+                  variant="bordered"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+                <span className="text-gray-400 font-bold">-</span>
+                <Input
+                  type="date"
+                  className="w-full"
+                  size="sm"
+                  variant="bordered"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
+            </div>
 
-          <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 hidden md:block" />
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                Status
+              </span>
+              <Select
+                className="w-full"
+                defaultSelectedKeys={["all"]}
+                placeholder="Filter Status"
+                selectionMode="single"
+                size="sm"
+                variant="bordered"
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                {[
+                  <SelectItem key="all">Semua Status</SelectItem>,
+                  ...Object.entries(statusLabels).map(([id, label]) => (
+                    <SelectItem key={id}>{label}</SelectItem>
+                  )),
+                ]}
+              </Select>
+            </div>
 
-          <Select
-            className="w-40"
-            defaultSelectedKeys={["all"]}
-            placeholder="Filter Status"
-            selectionMode="single"
-            size="sm"
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            {[
-              <SelectItem key="all">Semua Status</SelectItem>,
-              ...Object.entries(statusLabels).map(([id, label]) => (
-                <SelectItem key={id}>{label}</SelectItem>
-              )),
-            ]}
-          </Select>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                Urutkan
+              </span>
+              <div className="flex items-center gap-2">
+                <Select
+                  className="w-full"
+                  placeholder="Urutkan"
+                  selectedKeys={[sortDescriptor.column]}
+                  selectionMode="single"
+                  size="sm"
+                  variant="bordered"
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setSortDescriptor((prev) => ({
+                        ...prev,
+                        column: e.target.value,
+                      }));
+                    }
+                  }}
+                >
+                  <SelectItem key="waktu_order">Tanggal</SelectItem>
+                  <SelectItem key="customer">Nama Pelanggan</SelectItem>
+                  <SelectItem key="status">Status</SelectItem>
+                  <SelectItem key="ticket">Nomor Tiket</SelectItem>
+                </Select>
 
-          <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 hidden md:block" />
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="flat"
+                  className="shrink-0"
+                  onClick={() =>
+                    setSortDescriptor((prev) => ({
+                      ...prev,
+                      direction:
+                        prev.direction === "ascending"
+                          ? "descending"
+                          : "ascending",
+                    }))
+                  }
+                >
+                  {sortDescriptor.direction === "ascending" ? (
+                    <span className="font-bold">↑</span>
+                  ) : (
+                    <span className="font-bold">↓</span>
+                  )}
+                </Button>
+              </div>
+            </div>
 
-          <div className="flex items-center gap-2">
-            <Select
-              className="w-40"
-              labelPlacement="outside-left"
-              placeholder="Urutkan"
-              selectedKeys={[sortDescriptor.column]}
-              selectionMode="single"
-              size="sm"
-              onChange={(e) => {
-                if (e.target.value) {
-                  setSortDescriptor((prev) => ({
-                    ...prev,
-                    column: e.target.value,
-                  }));
-                }
-              }}
-            >
-              <SelectItem key="waktu_order">Tanggal</SelectItem>
-              <SelectItem key="customer">Nama Pelanggan</SelectItem>
-              <SelectItem key="status">Status</SelectItem>
-              <SelectItem key="ticket">Nomor Tiket</SelectItem>
-            </Select>
-
-            <Button
-              isIconOnly
-              size="sm"
-              variant="flat"
-              onClick={() =>
-                setSortDescriptor((prev) => ({
-                  ...prev,
-                  direction:
-                    prev.direction === "ascending" ? "descending" : "ascending",
-                }))
-              }
-            >
-              {sortDescriptor.direction === "ascending" ? (
-                <span className="text-lg">↑</span>
-              ) : (
-                <span className="text-lg">↓</span>
-              )}
-            </Button>
+            <div className="flex items-end">
+              <Button
+                color="primary"
+                isLoading={isLoading}
+                size="md"
+                className="w-full font-bold"
+                onPress={fetchOrders}
+              >
+                Tampilkan
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -396,116 +438,131 @@ export default function RiwayatPage() {
 
       {/* Error State */}
       {error && (
-        <Card className="backdrop-blur-xl bg-red-500/20 border border-red-500/30">
+        <Card className="mb-4 backdrop-blur-xl bg-red-500/20 border border-red-500/30">
           <CardBody className="p-6 text-center text-red-600 dark:text-red-400">
             {error}
           </CardBody>
         </Card>
       )}
 
-      {/* Orders List */}
-      {!isLoading && !error && (
-        <div className="space-y-3">
-          {filteredOrders.length === 0 ? (
-            <Card className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">
-              <CardBody className="p-6 text-center text-gray-600 dark:text-white/70">
-                {searchTerm
-                  ? "Tidak ada hasil pencarian."
-                  : "Belum ada riwayat pesanan."}
-              </CardBody>
-            </Card>
-          ) : (
-            filteredOrders.map((order) => (
-              <Card
-                key={order.id}
-                className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30"
-              >
-                <CardBody className="p-4">
-                  <div className="flex flex-col md:flex-row justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <span className="font-bold text-gray-900 dark:text-white">
-                          {order.nomor_tiket || "No Ticket"}
-                        </span>
-                        <Chip
-                          color={
-                            order.jenis_tugas === "JEMPUT"
-                              ? "secondary"
-                              : "primary"
-                          }
-                          size="sm"
-                          variant="flat"
-                        >
-                          {order.jenis_tugas}
-                        </Chip>
-                        <Chip
-                          color={statusColors[order.status_id] || "default"}
-                          size="sm"
-                        >
-                          {order.status_ref?.nama_status || "Unknown"}
-                        </Chip>
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-white/70 mb-1 flex items-center gap-1">
-                        <User size={14} />{" "}
-                        {order.customers?.nama_terakhir || "Unknown"} •{" "}
-                        {order.customers?.nomor_hp || "-"}
-                      </p>
-                      <p className="text-sm text-gray-500 dark:text-white/50 mb-1 flex items-center gap-1">
-                        <MapPin size={14} /> {order.alamat_jalan || "-"}
-                      </p>
-                      <p className="text-sm text-gray-500 dark:text-white/50 flex items-center gap-1">
-                        <Truck size={14} /> Kurir: {order.courierName || "-"}
-                      </p>
-                      {order.google_maps_link && (
-                        <Link
-                          className="text-xs text-primary hover:underline mt-1 inline-block"
-                          href={order.google_maps_link}
-                          target="_blank"
-                        >
-                          Buka di Google Maps →
-                        </Link>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col justify-between items-end gap-2">
-                      <div className="text-right text-sm text-gray-400 dark:text-white/40">
-                        <p>{formatDate(order.waktu_order)}</p>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          startContent={<History size={14} />}
-                          variant="flat"
-                          onPress={() => fetchLogs(order)}
-                        >
-                          Timeline
-                        </Button>
-
-                        {/* Allow Re-assign if status is > 2 (Ditugaskan) and < 6 (Selesai) */}
-                        {order.status_id > 2 && order.status_id < 6 && (
-                          <Button
-                            color="warning"
-                            isLoading={reassignLoading === order.id}
-                            size="sm"
-                            startContent={<RefreshCw size={14} />}
-                            variant="flat"
-                            onPress={() =>
-                              order.customers?.id &&
-                              handleReassign(order.id, order.customers.id)
-                            }
-                          >
-                            Tugaskan Lagi
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+      {!isLoading && !hasFetched ? (
+        <Card className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">
+          <CardBody className="py-20 text-center text-gray-500">
+            <Sparkles className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">
+              Pilih Rentang Tanggal
+            </h3>
+            <p>
+              Silakan pilih rentang tanggal dan klik <b>Tampilkan</b> untuk
+              memuat riwayat pesanan.
+            </p>
+          </CardBody>
+        </Card>
+      ) : (
+        !isLoading &&
+        !error && (
+          <div className="space-y-3">
+            {filteredOrders.length === 0 ? (
+              <Card className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">
+                <CardBody className="p-6 text-center text-gray-600 dark:text-white/70">
+                  {searchTerm
+                    ? "Tidak ada hasil pencarian."
+                    : "Belum ada riwayat pesanan."}
                 </CardBody>
               </Card>
-            ))
-          )}
-        </div>
+            ) : (
+              filteredOrders.map((order) => (
+                <Card
+                  key={order.id}
+                  className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30"
+                >
+                  <CardBody className="p-4">
+                    <div className="flex flex-col md:flex-row justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <span className="font-bold text-gray-900 dark:text-white">
+                            {order.nomor_tiket || "No Ticket"}
+                          </span>
+                          <Chip
+                            color={
+                              order.jenis_tugas === "JEMPUT"
+                                ? "secondary"
+                                : "primary"
+                            }
+                            size="sm"
+                            variant="flat"
+                          >
+                            {order.jenis_tugas}
+                          </Chip>
+                          <Chip
+                            color={statusColors[order.status_id] || "default"}
+                            size="sm"
+                          >
+                            {order.status_ref?.nama_status || "Unknown"}
+                          </Chip>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-white/70 mb-1 flex items-center gap-1">
+                          <User size={14} />{" "}
+                          {order.customers?.nama_terakhir || "Unknown"} •{" "}
+                          {order.customers?.nomor_hp || "-"}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-white/50 mb-1 flex items-center gap-1">
+                          <MapPin size={14} /> {order.alamat_jalan || "-"}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-white/50 flex items-center gap-1">
+                          <Truck size={14} /> Kurir: {order.courierName || "-"}
+                        </p>
+                        {order.google_maps_link && (
+                          <Link
+                            className="text-xs text-primary hover:underline mt-1 inline-block"
+                            href={order.google_maps_link}
+                            target="_blank"
+                          >
+                            Buka di Google Maps →
+                          </Link>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col justify-between items-end gap-2">
+                        <div className="text-right text-sm text-gray-400 dark:text-white/40">
+                          <p>{formatDate(order.waktu_order)}</p>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            startContent={<History size={14} />}
+                            variant="flat"
+                            onPress={() => fetchLogs(order)}
+                          >
+                            Timeline
+                          </Button>
+
+                          {/* Allow Re-assign if status is > 2 (Ditugaskan) and < 6 (Selesai) */}
+                          {order.status_id > 2 && order.status_id < 6 && (
+                            <Button
+                              color="warning"
+                              isLoading={reassignLoading === order.id}
+                              size="sm"
+                              startContent={<RefreshCw size={14} />}
+                              variant="flat"
+                              onPress={() =>
+                                order.customers?.id &&
+                                handleReassign(order.id, order.customers.id)
+                              }
+                            >
+                              Tugaskan Lagi
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardBody>
+                </Card>
+              ))
+            )}
+          </div>
+        )
       )}
 
       {/* Timeline Modal */}
@@ -544,11 +601,12 @@ export default function RiwayatPage() {
                       </span>
                       <span className="font-semibold text-gray-800 dark:text-white">
                         {log.status_ref?.nama_status || "Status Update"}
-                        {log.status_id_baru === 2 && selectedOrderForLogs?.courierName && (
-                          <span className="text-primary ml-1">
-                            ke {selectedOrderForLogs.courierName}
-                          </span>
-                        )}
+                        {log.status_id_baru === 2 &&
+                          selectedOrderForLogs?.courierName && (
+                            <span className="text-primary ml-1">
+                              ke {selectedOrderForLogs.courierName}
+                            </span>
+                          )}
                       </span>
                       <span className="text-xs text-gray-500">
                         {log.auth_users?.full_name

@@ -4,6 +4,7 @@ import { jwtDecode } from "jwt-decode";
 import { cookies } from "next/headers";
 
 import { createSupabaseAdmin } from "@/utils/supabase/server";
+import { calculateSLAKurir, calculateSLATiket } from "@/lib/sla-helper";
 
 interface JWTPayload {
   sub: string;
@@ -182,7 +183,7 @@ export async function PUT(request: NextRequest) {
     // Verify this order belongs to the courier
     const { data: order, error: fetchError } = await supabase
       .from("permintaan")
-      .select("courier_id")
+      .select("courier_id, waktu_penjemputan, waktu_assigned")
       .eq("id", id)
       .single();
 
@@ -204,32 +205,26 @@ export async function PUT(request: NextRequest) {
     const updateData: Record<string, unknown> = { status_id };
 
     if (status_id === 6) updateData.waktu_selesai = new Date().toISOString();
-    if (status_id === 3 || status_id === 5)
-      updateData.waktu_kurir_selesai = new Date().toISOString();
 
-    // SLA Calculation
-    // Only calculate if status is changing to 3 (JEMPUT) and SLA not yet set
-    if (status_id === 3) {
-      // Find the latest "Assigned" (2) log
-      const { data: assignedLog } = await supabase
-        .from("status_logs")
-        .select("created_at")
-        .eq("permintaan_id", id)
-        .eq("status_id_baru", 2)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
+    if (status_id === 3 || status_id === 5) {
+      const kurirSelesai = new Date().toISOString();
+      updateData.waktu_kurir_selesai = kurirSelesai;
 
-      if (assignedLog) {
-        const assignedTime = new Date(assignedLog.created_at).getTime();
-        const now = Date.now();
-        const diffHours = (now - assignedTime) / (1000 * 60 * 60);
+      // Calculate SLA Tiket & Kurir
+      const slaTiket = calculateSLATiket(order.waktu_penjemputan, kurirSelesai);
+      const slaKurir = calculateSLAKurir(
+        order.waktu_assigned,
+        order.waktu_penjemputan,
+        kurirSelesai,
+      );
 
-        // 2 hours SLA
-        updateData.sla_status = diffHours > 2 ? "FAILED" : "MEET";
-      } else {
-        // Fallback if no assigned log found (shouldn't happen in normal flow)
-        updateData.sla_status = "MEET";
+      if (slaTiket) {
+        updateData.sla_tiket_menit = slaTiket.minutes;
+        updateData.sla_tiket_status = slaTiket.status;
+      }
+      if (slaKurir) {
+        updateData.sla_kurir_menit = slaKurir.minutes;
+        updateData.sla_kurir_status = slaKurir.status;
       }
     }
 
@@ -243,7 +238,9 @@ export async function PUT(request: NextRequest) {
     }
 
     // Log status change
-    console.log(`Inserting log for order ${id}, new status: ${status_id}, by: ${userId}`);
+    console.log(
+      `Inserting log for order ${id}, new status: ${status_id}, by: ${userId}`,
+    );
     await supabase.from("status_logs").insert({
       permintaan_id: id,
       status_id_baru: status_id,

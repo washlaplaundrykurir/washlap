@@ -18,12 +18,19 @@ export async function GET(request: NextRequest) {
                 jenis_tugas,
                 alamat_jalan,
                 waktu_order,
+                waktu_penjemputan,
                 waktu_assigned,
                 waktu_kurir_selesai,
                 waktu_selesai,
                 status_id,
                 catatan_khusus,
                 courier_id,
+                sla_tiket_menit,
+                sla_tiket_status,
+                sla_kurir_menit,
+                sla_kurir_status,
+                sla_nota_menit,
+                sla_nota_status,
                 customers:customer_id (
                     nama_terakhir,
                     nomor_hp
@@ -31,6 +38,9 @@ export async function GET(request: NextRequest) {
                 auth_users:courier_id (
                     full_name,
                     email
+                ),
+                created_by_user:created_by (
+                    full_name
                 ),
                 status_ref:status_id (
                     nama_status
@@ -65,7 +75,14 @@ export async function GET(request: NextRequest) {
     if (type === "rekap") {
       const rekap: Record<
         string,
-        { name: string; antar: number; jemput: number; total: number }
+        {
+          name: string;
+          antar: number;
+          jemput: number;
+          total: number;
+          meet_pct: string;
+          failed_pct: string;
+        }
       > = {};
 
       orders?.forEach((orderItem) => {
@@ -82,49 +99,60 @@ export async function GET(request: NextRequest) {
             antar: 0,
             jemput: 0,
             total: 0,
+            meet_pct: "0%",
+            failed_pct: "0%",
           };
         }
 
-        // Count completed/processed tasks
-        // Asumsi status yang dihitung adalah status yang sudah diambil/diantar oleh kurir
-        // Status: 1=Baru, 2=Assigned, 3=OTW Jemput, 4=Diproses, 5=OTW Antar, 6=Selesai, 7=Batal
+        // Counter untuk internal calculation
+        if (!(rekap[courierName] as any)._meet)
+          (rekap[courierName] as any)._meet = 0;
+        if (!(rekap[courierName] as any)._failed)
+          (rekap[courierName] as any)._failed = 0;
+
         if (order.status_id >= 3 && order.status_id !== 7) {
-          if (order.jenis_tugas === "ANTAR" || order.jenis_tugas?.toUpperCase() === "ANTAR") {
+          if (
+            order.jenis_tugas === "ANTAR" ||
+            order.jenis_tugas?.toUpperCase() === "ANTAR"
+          ) {
             rekap[courierName].antar++;
-          } else if (order.jenis_tugas === "JEMPUT" || order.jenis_tugas?.toUpperCase() === "JEMPUT") {
+          } else if (
+            order.jenis_tugas === "JEMPUT" ||
+            order.jenis_tugas?.toUpperCase() === "JEMPUT"
+          ) {
             rekap[courierName].jemput++;
           }
 
-          rekap[courierName].total = rekap[courierName].antar + rekap[courierName].jemput;
+          rekap[courierName].total =
+            rekap[courierName].antar + rekap[courierName].jemput;
+
+          if (order.sla_tiket_status === "MEET") {
+            (rekap[courierName] as any)._meet++;
+          } else if (order.sla_tiket_status === "FAILED") {
+            (rekap[courierName] as any)._failed++;
+          }
+
+          const slaTotal =
+            (rekap[courierName] as any)._meet +
+            (rekap[courierName] as any)._failed;
+          if (slaTotal > 0) {
+            rekap[courierName].meet_pct =
+              Math.round(((rekap[courierName] as any)._meet / slaTotal) * 100) +
+              "%";
+            rekap[courierName].failed_pct =
+              Math.round(
+                ((rekap[courierName] as any)._failed / slaTotal) * 100,
+              ) + "%";
+          }
         }
       });
 
       return NextResponse.json({ data: Object.values(rekap) });
     } else if (type === "sla") {
       const slaData = orders?.map((order) => {
-        const assignTime = order.waktu_assigned
-          ? new Date(order.waktu_assigned).getTime()
-          : null;
-        const courierDoneTime = order.waktu_kurir_selesai
-          ? new Date(order.waktu_kurir_selesai).getTime()
-          : null;
-        const confirmTime = order.waktu_selesai
-          ? new Date(order.waktu_selesai).getTime()
-          : null;
-
-        const diffAssignToCourierDone =
-          assignTime && courierDoneTime
-            ? Math.round((courierDoneTime - assignTime) / (1000 * 60)) // in minutes
-            : null;
-
-        const diffCourierDoneToConfirm =
-          courierDoneTime && confirmTime
-            ? Math.round((confirmTime - courierDoneTime) / (1000 * 60)) // in minutes
-            : null;
-
         // Formatting helper
         const formatDuration = (mins: number | null) => {
-          if (mins === null) return "-";
+          if (mins === null || mins === undefined) return "-";
           const h = Math.floor(mins / 60);
           const m = mins % 60;
 
@@ -134,14 +162,26 @@ export async function GET(request: NextRequest) {
         return {
           nomor_tiket: order.nomor_tiket,
           tanggal_tiket: order.waktu_order,
+          waktu_penjemputan: order.waktu_penjemputan || "-",
           nomor_nota: order.nomor_nota || "-",
           tanggal_assign: order.waktu_assigned || "-",
           tanggal_diselesaikan_kurir: order.waktu_kurir_selesai || "-",
-          selisih_assign_selesai: formatDuration(diffAssignToCourierDone),
-          tanggal_input_nota: order.waktu_selesai || "-", // Assuming confirm time is input nota time
-          selisih_selesai_input: formatDuration(diffCourierDoneToConfirm),
-          raw_diff_1: diffAssignToCourierDone,
-          raw_diff_2: diffCourierDoneToConfirm,
+          tanggal_input_nota: order.waktu_selesai || "-",
+
+          // Pre-calculated SLA Data from DB
+          sla_tiket_durasi: formatDuration(order.sla_tiket_menit),
+          sla_tiket_status: order.sla_tiket_status || "-",
+          sla_kurir_durasi: formatDuration(order.sla_kurir_menit),
+          sla_kurir_status: order.sla_kurir_status || "-",
+          sla_nota_durasi: formatDuration(order.sla_nota_menit),
+          sla_nota_status: order.sla_nota_status || "-",
+
+          // Sorting helper fields
+          raw_sla_tiket: order.sla_tiket_menit ?? 0,
+          raw_sla_kurir: order.sla_kurir_menit ?? 0,
+          raw_sla_nota: order.sla_nota_menit ?? 0,
+
+          dibuat_oleh: (order as any).created_by_user?.full_name || "Customer",
         };
       });
 

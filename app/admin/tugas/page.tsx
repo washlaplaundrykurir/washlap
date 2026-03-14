@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
+import { useCouriers } from "@/hooks/use-master-data";
 
 interface Order {
   id: string;
@@ -59,7 +60,7 @@ function TugasPageContent() {
     searchParams.get("tab") || "jemput",
   );
   const [orders, setOrders] = useState<Order[]>([]);
-  const [couriers, setCouriers] = useState<Courier[]>([]);
+  const { data: couriers } = useCouriers();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [jemputCount, setJemputCount] = useState(0);
@@ -82,7 +83,6 @@ function TugasPageContent() {
   }, [activeTab]);
 
   useEffect(() => {
-    fetchCouriers();
     fetchCounts(); // Fetch counts for both tabs on mount
   }, []);
 
@@ -130,17 +130,6 @@ function TugasPageContent() {
       setError(err instanceof Error ? err.message : "Error");
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const fetchCouriers = async () => {
-    try {
-      const response = await fetch("/api/couriers");
-      const result = await response.json();
-
-      if (response.ok) setCouriers(result.data);
-    } catch {
-      /* ignore */
     }
   };
 
@@ -204,8 +193,12 @@ function TugasPageContent() {
   });
 
   const sortedOrders = [...orders].sort((a, b) => {
-    let first: string | number | null = a[sortDescriptor.column as keyof Order] as string | number | null;
-    let second: string | number | null = b[sortDescriptor.column as keyof Order] as string | number | null;
+    let first: string | number | null = a[
+      sortDescriptor.column as keyof Order
+    ] as string | number | null;
+    let second: string | number | null = b[
+      sortDescriptor.column as keyof Order
+    ] as string | number | null;
 
     if (sortDescriptor.column === "customers") {
       first = a.customers?.nama_terakhir || "";
