@@ -526,6 +526,13 @@ export default function ReportsPage() {
           : logsData
     ).length > 0;
 
+  const activeTabDescription =
+    activeTab === "rekap"
+      ? "Rekap transaksi berdasarkan tanggal tapi sudah antar/jemput oleh kurir."
+      : activeTab === "sla"
+        ? "Laporan SLA berdasarkan durasi proses tiket (request-selesai), durasi kurir (assign-selesai), dan durasi input nota."
+        : "";
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -547,7 +554,10 @@ export default function ReportsPage() {
         </Button>
       </div>
 
-      <div className="flex flex-col md:flex-row items-center gap-4 p-4 bg-gray-50 dark:bg-zinc-900/50 rounded-xl border border-gray-200">
+      <div className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-gray-50 dark:bg-zinc-900/50 rounded-xl border border-gray-200">
+        <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+          Filter Tanggal
+        </p>
         <div className="flex items-center gap-2">
           <Input
             type="date"
@@ -596,6 +606,11 @@ export default function ReportsPage() {
               }
             />
           </Tabs>
+          {activeTabDescription && (
+            <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
+              {activeTabDescription}
+            </p>
+          )}
           <div className="mt-4 overflow-x-auto">{renderTableContent()}</div>
         </CardBody>
       </Card>
