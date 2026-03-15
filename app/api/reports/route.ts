@@ -186,6 +186,41 @@ export async function GET(request: NextRequest) {
       });
 
       return NextResponse.json({ data: slaData });
+    } else if (type === "logs") {
+      const { data: logs, error: logsError } = await supabase
+        .from("status_logs")
+        .select(
+          `
+          id,
+          created_at,
+          permintaan:permintaan_id (
+            nomor_tiket,
+            nomor_nota
+          ),
+          status_ref:status_id_baru (
+            nama_status
+          ),
+          auth_users:changed_by (
+            full_name
+          )
+        `,
+        )
+        .order("created_at", { ascending: false });
+
+      if (logsError) {
+        return NextResponse.json({ error: logsError.message }, { status: 500 });
+      }
+
+      const formattedLogs = logs?.map((log: any) => ({
+        id: log.id,
+        waktu: log.created_at,
+        tiket: log.permintaan?.nomor_tiket || "-",
+        nota: log.permintaan?.nomor_nota || "-",
+        status: log.status_ref?.nama_status || "-",
+        oleh: log.auth_users?.full_name || "System",
+      }));
+
+      return NextResponse.json({ data: formattedLogs });
     }
 
     // Default: Tickets (Raw Data)

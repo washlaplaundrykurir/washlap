@@ -31,7 +31,7 @@ export async function PUT(request: NextRequest) {
       statusId,
       courierId,
       nomorNota,
-      waktuPenjemputan,
+      waktu_penjemputan, // Fixed from waktuPenjemputan to match frontend
       catatanKhusus,
     } = await request.json();
 
@@ -45,7 +45,6 @@ export async function PUT(request: NextRequest) {
     let finalCustomerId = customerId;
 
     // 1. Handle Customer Data
-    // Case A: Customer ID exists -> Update existing customer
     if (finalCustomerId) {
       const { error: customerError } = await supabaseAdmin
         .from("customers")
@@ -56,16 +55,13 @@ export async function PUT(request: NextRequest) {
         .eq("id", finalCustomerId);
 
       if (customerError) throw customerError;
-    }
-    // Case B: Customer ID missing but Phone provided -> Upsert by Phone & Link
-    else if (phone) {
+    } else if (phone) {
       const { data: newCustomer, error: upsertError } = await supabaseAdmin
         .from("customers")
         .upsert(
           {
             nomor_hp: phone,
             nama_terakhir: nama,
-            // Only update alamat/maps if provided, else keep existing or null
             ...(alamat ? { alamat_terakhir: alamat } : {}),
             ...(mapsLink ? { google_maps_terakhir: mapsLink } : {}),
           },
@@ -95,11 +91,10 @@ export async function PUT(request: NextRequest) {
       await supabaseAdmin.from("status_logs").insert({
         permintaan_id: orderId,
         status_id_baru: statusId,
-        changed_by: user?.id || null, // Track who changed it
+        changed_by: user?.id || null,
       });
     }
 
-    // Ensure we link the order to the customer if we just found/created one
     if (finalCustomerId) {
       updatePermintaanData.customer_id = finalCustomerId;
     }
@@ -109,11 +104,18 @@ export async function PUT(request: NextRequest) {
     }
     if (nomorNota !== undefined && nomorNota !== "")
       updatePermintaanData.nomor_nota = nomorNota;
-    if (waktuPenjemputan !== undefined && waktuPenjemputan !== "") {
-      updatePermintaanData.waktu_penjemputan = new Date(
-        waktuPenjemputan,
-      ).toISOString();
+
+    // Process waktu_penjemputan mapped from frontend key
+    if (
+      waktu_penjemputan !== undefined &&
+      waktu_penjemputan !== null &&
+      waktu_penjemputan !== ""
+    ) {
+      updatePermintaanData.waktu_penjemputan = waktu_penjemputan;
+    } else if (waktu_penjemputan === null) {
+      updatePermintaanData.waktu_penjemputan = null;
     }
+
     if (catatanKhusus !== undefined) {
       updatePermintaanData.catatan_khusus = catatanKhusus;
     }
@@ -125,10 +127,9 @@ export async function PUT(request: NextRequest) {
 
     if (orderError) throw orderError;
 
-    // 3. Update Order Items (Assuming 1-to-1 relationship)
+    // 3. Update Order Items
     if (produk || layanan || parfum) {
       const updates: any = {};
-
       if (produk) updates.produk_layanan = produk;
       if (layanan) updates.jenis_layanan = layanan;
       if (parfum) updates.parfum = parfum;
@@ -144,7 +145,6 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error updating order:", error);
-
     return NextResponse.json(
       { error: "Gagal mengupdate data pesanan" },
       { status: 500 },
