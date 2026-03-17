@@ -35,6 +35,7 @@ import {
   Smartphone,
   Tag,
   Map,
+  Trash2,
 } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
@@ -89,6 +90,7 @@ function OrdersPageContent() {
 
   // Modal State
   const editModal = useDisclosure();
+  const cancelModal = useDisclosure();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [editForm, setEditForm] = useState({
     alamat: "",
@@ -143,6 +145,36 @@ function OrdersPageContent() {
       waktuJemput: formattedDate,
     });
     editModal.onOpen();
+  };
+
+  const handleOpenCancel = (order: Order) => {
+    setSelectedOrder(order);
+    cancelModal.onOpen();
+  };
+
+  const handleCancelOrder = async () => {
+    if (!selectedOrder) return;
+    try {
+      setIsSaving(true);
+      const response = await fetch("/api/orders/update", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: selectedOrder.id,
+          statusId: 7, // Dibatalkan
+        }),
+      });
+
+      if (!response.ok) throw new Error((await response.json()).error);
+
+      showToast("success", "Pesanan berhasil dibatalkan");
+      cancelModal.onClose();
+      fetchOrders();
+    } catch (err: any) {
+      showToast("error", err.message || "Terjadi kesalahan saat membatalkan");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSaveChanges = async () => {
@@ -415,13 +447,21 @@ function OrdersPageContent() {
                   </div>
                 </CardBody>
 
-                <CardFooter className="px-4 py-3 bg-gray-50/50 dark:bg-white/5 border-t border-divider flex justify-end">
+                <CardFooter className="px-4 py-3 bg-gray-50/50 dark:bg-white/5 border-t border-divider flex justify-between items-center gap-2">
+                  <Button
+                    isIconOnly
+                    color="danger"
+                    variant="flat"
+                    className="h-10 w-10 min-w-10 rounded-xl"
+                    onPress={() => handleOpenCancel(order)}
+                  >
+                    <Trash2 size={18} />
+                  </Button>
                   <Button
                     color="primary"
-                    size="sm"
-                    className="font-black h-8 px-6 shadow-sm min-w-0"
+                    className="font-black h-10 flex-1 shadow-sm rounded-xl"
                     onPress={() => handleOpenEdit(order)}
-                    endContent={<ChevronRight size={14} />}
+                    endContent={<ChevronRight size={18} />}
                   >
                     Tugaskan Kurir
                   </Button>
@@ -650,6 +690,45 @@ function OrdersPageContent() {
               startContent={<Save size={18} />}
             >
               Simpan & Tugaskan
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      <Modal
+        isOpen={cancelModal.isOpen}
+        onClose={cancelModal.onClose}
+        size="md"
+        backdrop="blur"
+      >
+        <ModalContent className="bg-white dark:bg-zinc-900 border border-divider">
+          <ModalHeader className="flex flex-col gap-1 pb-4 pt-6 px-6">
+            <h2 className="text-xl font-black text-danger">Batalkan Tiket?</h2>
+          </ModalHeader>
+          <ModalBody className="py-2 px-6">
+            <p className="text-sm font-medium text-gray-500">
+              Apakah Anda yakin ingin membatalkan tiket{" "}
+              <span className="font-bold text-gray-900 dark:text-white">
+                {selectedOrder?.nomor_tiket}
+              </span>
+              ? Tindakan ini tidak dapat dibatalkan.
+            </p>
+          </ModalBody>
+          <ModalFooter className="pb-6 pt-4 px-6 flex gap-2">
+            <Button
+              variant="light"
+              className="font-bold flex-1"
+              onPress={cancelModal.onClose}
+            >
+              Tidak, Kembali
+            </Button>
+            <Button
+              color="danger"
+              className="font-black flex-1 shadow-lg shadow-danger-500/20"
+              isLoading={isSaving}
+              onPress={handleCancelOrder}
+              startContent={<Trash2 size={18} />}
+            >
+              Ya, Batalkan
             </Button>
           </ModalFooter>
         </ModalContent>

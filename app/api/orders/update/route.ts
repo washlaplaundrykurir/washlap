@@ -46,15 +46,19 @@ export async function PUT(request: NextRequest) {
 
     // 1. Handle Customer Data
     if (finalCustomerId) {
-      const { error: customerError } = await supabaseAdmin
-        .from("customers")
-        .update({
-          nama_terakhir: nama,
-          nomor_hp: phone,
-        })
-        .eq("id", finalCustomerId);
+      const customerUpdate: Record<string, any> = {};
 
-      if (customerError) throw customerError;
+      if (nama !== undefined) customerUpdate.nama_terakhir = nama;
+      if (phone !== undefined) customerUpdate.nomor_hp = phone;
+
+      if (Object.keys(customerUpdate).length > 0) {
+        const { error: customerError } = await supabaseAdmin
+          .from("customers")
+          .update(customerUpdate)
+          .eq("id", finalCustomerId);
+
+        if (customerError) throw customerError;
+      }
     } else if (phone) {
       const { data: newCustomer, error: upsertError } = await supabaseAdmin
         .from("customers")
@@ -75,10 +79,11 @@ export async function PUT(request: NextRequest) {
     }
 
     // 2. Update Permintaan (Order)
-    const updatePermintaanData: Record<string, unknown> = {
-      alamat_jalan: alamat,
-      google_maps_link: mapsLink,
-    };
+    const updatePermintaanData: Record<string, unknown> = {};
+
+    if (alamat !== undefined) updatePermintaanData.alamat_jalan = alamat;
+    if (mapsLink !== undefined)
+      updatePermintaanData.google_maps_link = mapsLink;
 
     if (statusId !== undefined) {
       updatePermintaanData.status_id = statusId;
