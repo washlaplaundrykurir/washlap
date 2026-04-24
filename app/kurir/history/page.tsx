@@ -5,7 +5,7 @@ import { Chip } from "@heroui/chip";
 import { Spinner } from "@heroui/spinner";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { History, ArrowLeft, Inbox, User, MapPin } from "lucide-react";
 
@@ -51,7 +51,8 @@ const statusColors: Record<
 
 export default function KurirHistoryPage() {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
   const [error, setError] = useState("");
 
   // Default filter: last 7 days
@@ -65,13 +66,11 @@ export default function KurirHistoryPage() {
   );
   const [endDate, setEndDate] = useState(today.toISOString().split("T")[0]);
 
-  useEffect(() => {
-    fetchHistory();
-  }, [startDate, endDate]); // Refetch when dates change
-
   const fetchHistory = async () => {
     try {
       setIsLoading(true);
+      setHasFetched(true);
+      setError("");
       const params = new URLSearchParams({
         status: "completed",
         startDate,
@@ -106,41 +105,61 @@ export default function KurirHistoryPage() {
   return (
     <div className="max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="p-2 bg-gray-700 dark:bg-white/10 rounded-xl">
+          <History className="w-5 h-5 text-white dark:text-white" />
+        </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <History className="w-6 h-6" /> Riwayat Tugas
+          <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-white">
+            Riwayat Tugas
           </h1>
-          <p className="text-sm text-gray-600 dark:text-white/70">
-            Total: {orders.length} tugas selesai
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+            {hasFetched ? `Total: ${orders.length} tugas selesai` : "Pilih tanggal dan klik Tampilkan"}
           </p>
         </div>
+      </div>
 
-        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+      {/* Filter */}
+      <div className="mb-6 backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30 rounded-xl p-4 flex flex-col gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <Input
-            className="w-full sm:w-36"
             label="Dari"
             size="sm"
             type="date"
             value={startDate}
             onValueChange={setStartDate}
+            variant="bordered"
+            classNames={{ label: "text-xs font-bold" }}
           />
           <Input
-            className="w-full sm:w-36"
             label="Sampai"
             size="sm"
             type="date"
             value={endDate}
             onValueChange={setEndDate}
+            variant="bordered"
+            classNames={{ label: "text-xs font-bold" }}
           />
+        </div>
+        <div className="flex gap-2">
+          <Button
+            color="primary"
+            className="flex-1 font-bold"
+            isLoading={isLoading}
+            size="sm"
+            onClick={fetchHistory}
+          >
+            Tampilkan
+          </Button>
           <Button
             as={Link}
-            className="h-full min-h-[48px] sm:min-h-[40px]"
             href="/kurir"
-            size="lg"
             variant="flat"
+            size="sm"
+            startContent={<ArrowLeft size={14} />}
+            className="font-bold"
           >
-            <ArrowLeft size={16} />
+            Kembali
           </Button>
         </div>
       </div>
@@ -162,7 +181,16 @@ export default function KurirHistoryPage() {
       )}
 
       {/* History List */}
-      {!isLoading && !error && (
+      {!isLoading && !hasFetched ? (
+        <Card className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">
+          <CardBody className="py-16 text-center flex flex-col items-center gap-3">
+            <History className="w-12 h-12 text-gray-300 dark:text-gray-600" />
+            <p className="text-gray-500 dark:text-white/50 font-medium">
+              Pilih rentang tanggal dan klik <b>Tampilkan</b> untuk memuat riwayat.
+            </p>
+          </CardBody>
+        </Card>
+      ) : !isLoading && !error && (
         <div className="space-y-3">
           {orders.length === 0 ? (
             <Card className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">

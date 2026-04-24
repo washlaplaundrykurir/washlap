@@ -71,52 +71,15 @@ export function DashboardNavbar({
 }: DashboardNavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [userRole, setUserRole] = useState<"super-admin" | "admin" | "kurir">(
-    initialRole,
-  );
+  // Use initialRole from server as the source of truth — do NOT override with client-side fetch.
+  // The server layout already resolves the correct role from the session cookie.
+  const userRole = initialRole;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Close mobile menu when route changes
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
-
-  // Fetch actual user role on mount
-  useEffect(() => {
-    const fetchUserRole = async () => {
-      try {
-        // Check localStorage for cached user data
-        const cachedUser = localStorage.getItem("washlap_user_data");
-        if (cachedUser) {
-          const { user, timestamp } = JSON.parse(cachedUser);
-          // Cache expires after 1 hour (3600000 ms)
-          if (Date.now() - timestamp < 3600000 && user?.role) {
-            setUserRole(user.role as "super-admin" | "admin" | "kurir");
-            return;
-          }
-        }
-
-        const response = await fetch("/api/users/me");
-
-        if (response.ok) {
-          const data = await response.json();
-
-          if (data.user?.role) {
-            setUserRole(data.user.role as "super-admin" | "admin" | "kurir");
-            // Store in localStorage with timestamp
-            localStorage.setItem(
-              "washlap_user_data",
-              JSON.stringify({ user: data.user, timestamp: Date.now() }),
-            );
-          }
-        }
-      } catch {
-        // Use initial role on error
-      }
-    };
-
-    fetchUserRole();
-  }, []);
 
   // Filter links based on role
   const getLinks = () => {

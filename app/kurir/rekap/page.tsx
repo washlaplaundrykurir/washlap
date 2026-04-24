@@ -6,7 +6,7 @@ import { Input } from "@heroui/input";
 import { Spinner } from "@heroui/spinner";
 import { ArrowLeft, FileChartColumn, Printer } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from "@heroui/table";
 
 
@@ -19,7 +19,8 @@ interface ReportRow {
 
 export default function CourierReportPage() {
     const [reportData, setReportData] = useState<ReportRow[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
+    const [hasFetched, setHasFetched] = useState(false);
     const [error, setError] = useState("");
 
     const today = new Date();
@@ -28,13 +29,11 @@ export default function CourierReportPage() {
     const [startDate, setStartDate] = useState(firstDay.toISOString().split("T")[0]);
     const [endDate, setEndDate] = useState(today.toISOString().split("T")[0]);
 
-    useEffect(() => {
-        fetchReport();
-    }, [startDate, endDate]);
-
     const fetchReport = async () => {
         try {
             setIsLoading(true);
+            setHasFetched(true);
+            setError("");
             const params = new URLSearchParams({ startDate, endDate });
             const response = await fetch(`/api/kurir/report?${params}`);
             const result = await response.json();
@@ -50,8 +49,6 @@ export default function CourierReportPage() {
     };
 
     const formatDate = (dateString: string) => {
-        // Create date object from the date string (YYYY-MM-DD)
-        // We adding time component to avoid timezone issues when parsing simple dates
         const date = new Date(dateString + 'T12:00:00');
         return date.toLocaleDateString("id-ID", {
             day: "numeric",
@@ -62,40 +59,65 @@ export default function CourierReportPage() {
 
     return (
         <div className="max-w-4xl mx-auto p-4 md:p-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-500/20">
+                    <FileChartColumn className="w-5 h-5 text-white" />
+                </div>
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <FileChartColumn className="w-6 h-6 text-blue-500" /> Rekapitulasi Tugas
+                    <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-white">
+                        Rekapitulasi Tugas
                     </h1>
-                    <p className="text-gray-600 dark:text-white/70">
+                    <p className="text-gray-500 dark:text-gray-400 text-xs font-medium">
                         Laporan harian penjemputan dan pengantaran
                     </p>
                 </div>
-
-                <Button as={Link} href="/kurir" variant="flat" startContent={<ArrowLeft size={16} />}>
-                    Kembali
-                </Button>
             </div>
 
+            {/* Filter */}
             <Card className="mb-6 backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">
-                <CardBody className="flex flex-col md:flex-row gap-4 p-4 items-end">
-                    <Input
-                        type="date"
-                        label="Dari Tanggal"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="w-full md:w-1/3"
-                    />
-                    <Input
-                        type="date"
-                        label="Sampai Tanggal"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        className="w-full md:w-1/3"
-                    />
-                    <Button color="primary" onClick={fetchReport} isLoading={isLoading}>
-                        Terapkan
-                    </Button>
+                <CardBody className="p-4 gap-3 flex flex-col">
+                    <div className="grid grid-cols-2 gap-3">
+                        <Input
+                            type="date"
+                            label="Dari Tanggal"
+                            size="sm"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            variant="bordered"
+                            classNames={{ label: "text-xs font-bold" }}
+                        />
+                        <Input
+                            type="date"
+                            label="Sampai Tanggal"
+                            size="sm"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            variant="bordered"
+                            classNames={{ label: "text-xs font-bold" }}
+                        />
+                    </div>
+                    <div className="flex gap-2">
+                        <Button
+                            color="primary"
+                            onClick={fetchReport}
+                            isLoading={isLoading}
+                            className="flex-1 font-bold"
+                            size="sm"
+                        >
+                            Tampilkan
+                        </Button>
+                        <Button
+                            as={Link}
+                            href="/kurir"
+                            variant="flat"
+                            size="sm"
+                            startContent={<ArrowLeft size={14} />}
+                            className="font-bold"
+                        >
+                            Kembali
+                        </Button>
+                    </div>
                 </CardBody>
             </Card>
 
@@ -111,6 +133,15 @@ export default function CourierReportPage() {
                 <div className="flex justify-center py-12">
                     <Spinner size="lg" />
                 </div>
+            ) : !hasFetched ? (
+                <Card className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">
+                    <CardBody className="py-16 text-center flex flex-col items-center gap-3">
+                        <FileChartColumn className="w-12 h-12 text-gray-300 dark:text-gray-600" />
+                        <p className="text-gray-500 dark:text-white/50 font-medium">
+                            Pilih rentang tanggal dan klik <b>Tampilkan</b> untuk memuat data.
+                        </p>
+                    </CardBody>
+                </Card>
             ) : (
                 <div className="overflow-x-auto">
                     <Table aria-label="Tabel Rekapitulasi" classNames={{
