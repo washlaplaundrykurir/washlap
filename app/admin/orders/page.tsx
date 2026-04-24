@@ -179,6 +179,21 @@ function OrdersPageContent() {
 
   const handleSaveChanges = async () => {
     if (!selectedOrder) return;
+
+    if (!editForm.statusId) {
+      showToast("error", "Status pesanan wajib dipilih.");
+      return;
+    }
+
+    if (
+      selectedOrder.jenis_tugas === "ANTAR" &&
+      editForm.statusId === "2" &&
+      (!editForm.nomorNota || editForm.nomorNota.trim() === "")
+    ) {
+      showToast("error", "Nomor Nota Fisik wajib diisi untuk penugasan ANTAR.");
+      return;
+    }
+
     try {
       setIsSaving(true);
       const response = await fetch("/api/orders/update", {

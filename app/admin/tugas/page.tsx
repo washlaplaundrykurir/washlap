@@ -37,6 +37,7 @@ import {
   ArrowUpNarrowWide,
   ArrowDownWideNarrow,
   ListFilter,
+  Copy,
 } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
@@ -157,6 +158,14 @@ function TugasPageContent() {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const copyPhone = (phone: string) => {
+    navigator.clipboard.writeText(phone).then(() => {
+      showToast("success", `Nomor ${phone} disalin!`);
+    }).catch(() => {
+      showToast("error", "Gagal menyalin nomor.");
+    });
   };
 
   const formatDate = (dateString: string | null) => {
@@ -464,19 +473,27 @@ function TugasPageContent() {
 
                 <CardBody className="px-4 py-2 space-y-3">
                   <div className="bg-white/50 dark:bg-white/5 rounded-xl p-3 border border-black/5 dark:border-white/5">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <User size={14} className="text-blue-500" />
-                        <span className="font-black text-gray-900 dark:text-white text-xs uppercase">
+                    <div className="flex flex-col gap-1.5 mb-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <User size={14} className="text-blue-500 shrink-0" />
+                        <span className="font-black text-gray-900 dark:text-white text-xs uppercase truncate">
                           {order.customers?.nama_terakhir || "PELANGGAN"}
                         </span>
                       </div>
-                      <Link
-                        href={`tel:${order.customers?.nomor_hp}`}
-                        className="p-1 px-2.5 bg-green-500/10 text-green-600 rounded-full text-[10px] font-bold"
-                      >
-                        <Phone size={10} className="inline mr-1" /> Hubungi
-                      </Link>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Phone size={11} className="text-gray-400 shrink-0" />
+                        <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300 truncate">
+                          {order.customers?.nomor_hp || "-"}
+                        </span>
+                        {order.customers?.nomor_hp && (
+                          <button
+                            className="shrink-0 flex items-center gap-0.5 text-[9px] text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/20 px-1.5 py-0.5 rounded-full transition-colors font-bold"
+                            onClick={() => copyPhone(order.customers!.nomor_hp)}
+                          >
+                            <Copy size={9} /> Salin
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-start gap-2">
                       <MapPin

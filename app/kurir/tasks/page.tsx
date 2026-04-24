@@ -19,6 +19,7 @@ import {
   FileText,
   X,
   Check,
+  Copy,
 } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
@@ -124,6 +125,14 @@ export default function KurirTasksPage() {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const copyPhone = (phone: string) => {
+    navigator.clipboard.writeText(phone).then(() => {
+      showToast("success", `Nomor ${phone} disalin!`);
+    }).catch(() => {
+      showToast("error", "Gagal menyalin nomor.");
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -245,16 +254,24 @@ export default function KurirTasksPage() {
 
                   {/* Customer Info */}
                   <div className="text-sm">
-                    <p className="text-gray-900 dark:text-white font-medium flex items-center gap-1">
-                      <User size={14} />{" "}
-                      {order.customers?.nama_terakhir || "Unknown"}
+                    <p className="text-gray-900 dark:text-white font-medium flex items-center gap-1 min-w-0">
+                      <User size={14} className="shrink-0" />{" "}
+                      <span className="truncate">{order.customers?.nama_terakhir || "Unknown"}</span>
                     </p>
-                    <a
-                      className="text-primary hover:underline flex items-center gap-1"
-                      href={`tel:${order.customers?.nomor_hp}`}
-                    >
-                      <Phone size={14} /> {order.customers?.nomor_hp || "-"}
-                    </a>
+                    <div className="flex items-center gap-2 mt-1 min-w-0">
+                      <Phone size={14} className="text-gray-400 shrink-0" />
+                      <span className="text-gray-700 dark:text-white/80 font-medium truncate">
+                        {order.customers?.nomor_hp || "-"}
+                      </span>
+                      {order.customers?.nomor_hp && (
+                        <button
+                          className="shrink-0 flex items-center gap-1 text-xs text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/20 px-2 py-0.5 rounded-full transition-colors"
+                          onClick={() => copyPhone(order.customers!.nomor_hp)}
+                        >
+                          <Copy size={11} /> Salin
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Address */}

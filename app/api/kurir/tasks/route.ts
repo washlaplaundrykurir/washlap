@@ -173,7 +173,7 @@ export async function PUT(request: NextRequest) {
     const supabase = createSupabaseAdmin();
     const { id, status_id } = await request.json();
 
-    if (!id || status_id === undefined) {
+    if (!id || status_id === undefined || status_id === null) {
       return NextResponse.json(
         { error: "Order ID dan status diperlukan" },
         { status: 400 },

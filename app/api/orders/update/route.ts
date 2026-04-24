@@ -85,7 +85,7 @@ export async function PUT(request: NextRequest) {
     if (mapsLink !== undefined)
       updatePermintaanData.google_maps_link = mapsLink;
 
-    if (statusId !== undefined) {
+    if (statusId !== undefined && statusId !== null) {
       updatePermintaanData.status_id = statusId;
       if (statusId === 2)
         updatePermintaanData.waktu_assigned = new Date().toISOString();

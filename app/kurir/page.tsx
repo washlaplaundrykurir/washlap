@@ -6,7 +6,7 @@ import { Chip } from "@heroui/chip";
 import { Spinner } from "@heroui/spinner";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Hand, Truck, Package, CheckCircle, ClipboardList } from "lucide-react";
+import { Hand, Truck, Package, CheckCircle, ClipboardList, Phone, Copy } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
 
@@ -134,6 +134,14 @@ export default function KurirPage() {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const copyPhone = (phone: string) => {
+    navigator.clipboard.writeText(phone).then(() => {
+      showToast("success", `Nomor ${phone} disalin!`);
+    }).catch(() => {
+      showToast("error", "Gagal menyalin nomor.");
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -275,13 +283,24 @@ export default function KurirPage() {
 
                   {/* Customer Info */}
                   <div className="text-sm">
-                    <p className="text-gray-900 dark:text-white font-medium flex items-center gap-1">
-                      <Hand size={14} />{" "}
-                      {order.customers?.nama_terakhir || "Unknown"}
+                    <p className="text-gray-900 dark:text-white font-medium flex items-center gap-1 min-w-0">
+                      <Hand size={14} className="shrink-0" />{" "}
+                      <span className="truncate">{order.customers?.nama_terakhir || "Unknown"}</span>
                     </p>
-                    <p className="text-gray-600 dark:text-white/70 flex items-center gap-1">
-                      <Truck size={14} /> {order.customers?.nomor_hp || "-"}
-                    </p>
+                    <div className="flex items-center gap-2 mt-1 min-w-0">
+                      <Phone size={14} className="text-gray-400 shrink-0" />
+                      <span className="text-gray-700 dark:text-white/80 font-medium truncate">
+                        {order.customers?.nomor_hp || "-"}
+                      </span>
+                      {order.customers?.nomor_hp && (
+                        <button
+                          className="shrink-0 flex items-center gap-1 text-xs text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/20 px-2 py-0.5 rounded-full transition-colors"
+                          onClick={() => copyPhone(order.customers!.nomor_hp)}
+                        >
+                          <Copy size={11} /> Salin
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Address */}
@@ -358,11 +377,4 @@ export default function KurirPage() {
                     </div>
                   </div>
                 </div>
-              </CardBody>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+             
