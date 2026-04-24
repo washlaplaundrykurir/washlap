@@ -377,4 +377,11 @@ export default function KurirPage() {
                     </div>
                   </div>
                 </div>
-             
+              </CardBody>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
