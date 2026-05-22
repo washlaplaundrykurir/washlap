@@ -444,15 +444,20 @@ export default function Home() {
               value={formData.permintaan}
               onValueChange={(value) => handleInputChange("permintaan", value)}
             >
-              <Checkbox
-                classNames={{
-                  label: "text-gray-700 dark:text-white/80",
-                  wrapper: "before:border-gray-400 dark:before:border-white/50",
-                }}
-                value="antar"
-              >
-                Antar
-              </Checkbox>
+              <div className="flex flex-col gap-1">
+                <Checkbox
+                  classNames={{
+                    label: "text-gray-700 dark:text-white/80",
+                    wrapper: "before:border-gray-400 dark:before:border-white/50",
+                  }}
+                  value="antar"
+                >
+                  Antar
+                </Checkbox>
+                <p className="text-xs text-gray-500 dark:text-white/50 ml-7">
+                  Permintaan antar dapat disampaikan setelah anda mendapatkan pemberitahuan penyelesaian transaksi dari admin.
+                </p>
+              </div>
               <Checkbox
                 classNames={{
                   label: "text-gray-700 dark:text-white/80",

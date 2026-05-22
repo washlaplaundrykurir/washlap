@@ -42,6 +42,29 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Guard: hanya boleh batalkan (status 7) jika order masih status Baru (1)
+    if (statusId === 7) {
+      const { data: currentOrder, error: fetchError } = await supabaseAdmin
+        .from("permintaan")
+        .select("status_id")
+        .eq("id", orderId)
+        .single();
+
+      if (fetchError || !currentOrder) {
+        return NextResponse.json(
+          { error: "Order tidak ditemukan" },
+          { status: 404 },
+        );
+      }
+
+      if (currentOrder.status_id >= 2) {
+        return NextResponse.json(
+          { error: "Tiket yang sudah ditugaskan tidak dapat dibatalkan" },
+          { status: 403 },
+        );
+      }
+    }
+
     let finalCustomerId = customerId;
 
     // 1. Handle Customer Data

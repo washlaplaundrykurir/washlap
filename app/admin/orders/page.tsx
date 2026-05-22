@@ -469,6 +469,8 @@ function OrdersPageContent() {
                     color="danger"
                     variant="flat"
                     className="h-10 w-10 min-w-10 rounded-xl"
+                    isDisabled={order.status_id >= 2}
+                    title={order.status_id >= 2 ? "Tiket yang sudah ditugaskan tidak dapat dibatalkan" : "Batalkan tiket"}
                     onPress={() => handleOpenCancel(order)}
                   >
                     <Trash2 size={18} />
