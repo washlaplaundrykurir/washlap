@@ -1,13 +1,17 @@
+// Offset WIB = UTC+7 dalam milidetik
+const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
+
 /**
  * Menghitung durasi aktif dalam menit antara dua waktu,
- * dengan menggunakan komponen waktu (clock time) dari objek Date secara langsung.
+ * berdasarkan jam operasional dalam zona waktu WIB (UTC+7).
+ *
+ * Semua timestamp di database disimpan dalam UTC (+00).
+ * Jam operasional (opStartHour, opEndHour) adalah jam WIB,
+ * sehingga perlu dikonversi ke UTC sebelum dibandingkan.
  *
  * Aturan Operasional:
- * - Jam Operasional: opStartHour s/d opEndHour (misal: 10:00 s/d 21:00)
- * - Di luar jam tersebut (malam s/d pagi), waktu tidak dihitung.
- *
- * Catatan: Fungsi ini menggunakan metode UTC untuk memastikan perhitungan konsisten
- * dengan nilai mentah yang disimpan di database, menghindari pergeseran zona waktu lokal.
+ * - Jam Operasional: opStartHour s/d opEndHour dalam WIB (misal: 10:00 s/d 21:00 WIB)
+ * - Di luar jam tersebut, waktu tidak dihitung.
  */
 export function calculateActiveMinutes(
   start: Date | string | null,
@@ -27,19 +31,24 @@ export function calculateActiveMinutes(
 
   let totalActiveMinutes = 0;
 
-  // Inisialisasi loop dari hari kalender mulai sampai selesai menggunakan UTC
+  // Iterasi per hari kalender dalam WIB.
+  // Kita shift timestamp ke "WIB-local" dengan menambah offset,
+  // lalu ambil tanggal UTC-nya — yang sebenarnya adalah tanggal WIB.
+  const startWIB = new Date(startMS + WIB_OFFSET_MS);
+  const endWIB = new Date(endMS + WIB_OFFSET_MS);
+
   const currentDay = new Date(
     Date.UTC(
-      startObj.getUTCFullYear(),
-      startObj.getUTCMonth(),
-      startObj.getUTCDate(),
+      startWIB.getUTCFullYear(),
+      startWIB.getUTCMonth(),
+      startWIB.getUTCDate(),
     ),
   );
   const lastDay = new Date(
     Date.UTC(
-      endObj.getUTCFullYear(),
-      endObj.getUTCMonth(),
-      endObj.getUTCDate(),
+      endWIB.getUTCFullYear(),
+      endWIB.getUTCMonth(),
+      endWIB.getUTCDate(),
     ),
   );
 
@@ -48,12 +57,10 @@ export function calculateActiveMinutes(
     const m = currentDay.getUTCMonth();
     const d = currentDay.getUTCDate();
 
-    /**
-     * Tentukan jendela operasional hari ini.
-     * Kita menggunakan Date.UTC agar selaras dengan timeline startMS dan endMS.
-     */
-    const opStartUTC = Date.UTC(y, m, d, opStartHour, 0, 0, 0);
-    const opEndUTC = Date.UTC(y, m, d, opEndHour, 0, 0, 0);
+    // Jendela operasional hari ini dalam UTC:
+    // jam WIB dikonversi ke UTC dengan mengurangi offset 7 jam
+    const opStartUTC = Date.UTC(y, m, d, opStartHour, 0, 0, 0) - WIB_OFFSET_MS;
+    const opEndUTC = Date.UTC(y, m, d, opEndHour, 0, 0, 0) - WIB_OFFSET_MS;
 
     // Cari irisan antara [startMS, endMS] dengan [opStartUTC, opEndUTC]
     const effectiveStart = Math.max(startMS, opStartUTC);
@@ -63,7 +70,7 @@ export function calculateActiveMinutes(
       totalActiveMinutes += (effectiveEnd - effectiveStart) / (1000 * 60);
     }
 
-    // Pindah ke hari berikutnya
+    // Pindah ke hari berikutnya (dalam kalender WIB)
     currentDay.setUTCDate(currentDay.getUTCDate() + 1);
   }
 

@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
           google_maps_link: googleMapsLink,
           waktu_order: now.toISOString(),
           waktu_penjemputan: waktuPenjemputan
-            ? new Date(waktuPenjemputan).toISOString()
+            ? new Date(waktuPenjemputan + "+07:00").toISOString()
             : null,
           catatan_khusus: catatanKhusus,
           created_by: user?.id || null, // Track who created the order

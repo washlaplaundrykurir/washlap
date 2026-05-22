@@ -131,9 +131,10 @@ function OrdersPageContent() {
 
     let formattedDate = "";
     if (order.waktu_penjemputan) {
-      formattedDate = new Date(order.waktu_penjemputan)
-        .toISOString()
-        .substring(0, 16);
+      // Konversi UTC ke WIB (UTC+7) untuk ditampilkan di input datetime-local
+      const utcMs = new Date(order.waktu_penjemputan).getTime();
+      const wibMs = utcMs + 7 * 60 * 60 * 1000;
+      formattedDate = new Date(wibMs).toISOString().substring(0, 16);
     }
 
     setEditForm({
@@ -210,7 +211,7 @@ function OrdersPageContent() {
           nomorNota: editForm.nomorNota || null,
           catatanKhusus: editForm.catatanKhusus,
           waktu_penjemputan: editForm.waktuJemput
-            ? `${editForm.waktuJemput}:00Z`
+            ? new Date(editForm.waktuJemput + ":00+07:00").toISOString()
             : null,
         }),
       });
