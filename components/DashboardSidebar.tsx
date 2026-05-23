@@ -8,6 +8,7 @@ import { Button } from "@heroui/button";
 import { adminLinks, kurirLinks } from "./DashboardNavbar";
 
 import { ThemeSwitch } from "@/components/theme-switch";
+import { APP_VERSION } from "@/lib/version";
 
 interface DashboardSidebarProps {
   role: "super-admin" | "admin" | "kurir";
@@ -93,6 +94,9 @@ export function DashboardSidebar({ role, userName }: DashboardSidebarProps) {
         >
           Logout
         </Button>
+        <p className="text-center text-xs text-gray-400 dark:text-gray-600">
+          v{APP_VERSION}
+        </p>
       </div>
     </aside>
   );

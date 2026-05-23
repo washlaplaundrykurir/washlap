@@ -33,7 +33,18 @@ export async function POST(request: NextRequest) {
 
     // Sanitize input to prevent duplicates due to whitespace
     const cleanNama = nama?.trim();
-    const cleanNomorHP = nomorHP?.trim();
+
+    // Normalisasi nomor HP ke format 08xxx
+    // Strip semua karakter non-digit, lalu ganti prefix 62 -> 0
+    const normalizePhone = (phone: string): string => {
+      if (!phone) return phone;
+      const digitsOnly = phone.replace(/[^0-9]/g, "");
+      if (digitsOnly.startsWith("62")) {
+        return "0" + digitsOnly.slice(2);
+      }
+      return digitsOnly;
+    };
+    const cleanNomorHP = normalizePhone(nomorHP?.trim() || "");
 
     // 1. Upsert customer (based on nomor_hp)
     const { data: customer, error: customerError } = await supabase

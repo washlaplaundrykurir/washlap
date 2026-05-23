@@ -83,11 +83,18 @@ export async function PUT(request: NextRequest) {
         if (customerError) throw customerError;
       }
     } else if (phone) {
+      // Normalisasi nomor HP ke format 08xxx sebelum upsert
+      const normalizePhone = (p: string): string => {
+        const digitsOnly = p.replace(/[^0-9]/g, "");
+        return digitsOnly.startsWith("62") ? "0" + digitsOnly.slice(2) : digitsOnly;
+      };
+      const normalizedPhone = normalizePhone(phone.trim());
+
       const { data: newCustomer, error: upsertError } = await supabaseAdmin
         .from("customers")
         .upsert(
           {
-            nomor_hp: phone,
+            nomor_hp: normalizedPhone,
             nama_terakhir: nama,
             ...(alamat ? { alamat_terakhir: alamat } : {}),
             ...(mapsLink ? { google_maps_terakhir: mapsLink } : {}),
