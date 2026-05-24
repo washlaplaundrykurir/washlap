@@ -1,9 +1,9 @@
 /* eslint-disable no-console */
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 
-import { createSupabaseAdmin, createClient } from "@/utils/supabase/server";
+import { createSupabaseAdmin } from "@/utils/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
+import { normalizeAndValidatePhone } from "@/lib/phone";
 
 export async function PUT(request: NextRequest) {
   const { user, error: authError } = await requireAdmin();
@@ -61,19 +61,20 @@ export async function PUT(request: NextRequest) {
 
     let finalCustomerId = customerId;
 
-    // Normalisasi nomor HP ke format 08xxx (dipakai di kedua branch)
-    const normalizePhone = (p: string): string => {
-      const digitsOnly = p.replace(/[^0-9]/g, "");
-      return digitsOnly.startsWith("62") ? "0" + digitsOnly.slice(2) : digitsOnly;
-    };
-
     // 1. Handle Customer Data
     if (finalCustomerId) {
       const customerUpdate: Record<string, any> = {};
 
       if (nama !== undefined) customerUpdate.nama_terakhir = nama;
       if (phone !== undefined && phone !== null && phone !== "") {
-        customerUpdate.nomor_hp = normalizePhone(phone.trim());
+        const normalized = normalizeAndValidatePhone(phone);
+        if (!normalized) {
+          return NextResponse.json(
+            { error: "Format nomor HP tidak valid. Gunakan format 08xxx (10-13 digit)." },
+            { status: 400 },
+          );
+        }
+        customerUpdate.nomor_hp = normalized;
       }
 
       if (Object.keys(customerUpdate).length > 0) {
@@ -85,7 +86,13 @@ export async function PUT(request: NextRequest) {
         if (customerError) throw customerError;
       }
     } else if (phone) {
-      const normalizedPhone = normalizePhone(phone.trim());
+      const normalizedPhone = normalizeAndValidatePhone(phone);
+      if (!normalizedPhone) {
+        return NextResponse.json(
+          { error: "Format nomor HP tidak valid. Gunakan format 08xxx (10-13 digit)." },
+          { status: 400 },
+        );
+      }
 
       const { data: newCustomer, error: upsertError } = await supabaseAdmin
         .from("customers")

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 import { createSupabaseAdmin, createClient } from "@/utils/supabase/server";
+import { normalizeAndValidatePhone } from "@/lib/phone";
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,17 +35,17 @@ export async function POST(request: NextRequest) {
     // Sanitize input to prevent duplicates due to whitespace
     const cleanNama = nama?.trim();
 
-    // Normalisasi nomor HP ke format 08xxx
-    // Strip semua karakter non-digit, lalu ganti prefix 62 -> 0
-    const normalizePhone = (phone: string): string => {
-      if (!phone) return phone;
-      const digitsOnly = phone.replace(/[^0-9]/g, "");
-      if (digitsOnly.startsWith("62")) {
-        return "0" + digitsOnly.slice(2);
-      }
-      return digitsOnly;
-    };
-    const cleanNomorHP = normalizePhone(nomorHP?.trim() || "");
+    // Normalisasi + validasi nomor HP
+    const cleanNomorHP = normalizeAndValidatePhone(nomorHP);
+    if (!cleanNomorHP) {
+      return NextResponse.json(
+        {
+          error:
+            "Format nomor HP tidak valid. Gunakan format 08xxx atau +62xxx (10-13 digit).",
+        },
+        { status: 400 },
+      );
+    }
 
     // 1. Upsert customer (based on nomor_hp)
     const { data: customer, error: customerError } = await supabase
