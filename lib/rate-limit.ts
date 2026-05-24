@@ -44,8 +44,8 @@ export function rateLimit(
 if (typeof setInterval !== "undefined") {
   setInterval(() => {
     const now = Date.now();
-    for (const [key, entry] of store.entries()) {
+    Array.from(store.entries()).forEach(([key, entry]) => {
       if (now > entry.resetAt) store.delete(key);
-    }
+    });
   }, 5 * 60_000);
 }
