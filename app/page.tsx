@@ -66,10 +66,15 @@ export default function Home() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  // Normalisasi nomor HP di frontend (untuk lookup)
+  // Normalisasi nomor HP di frontend
+  // - Strip +, -, spasi, karakter non-digit
+  // - Jika diawali 0 → ganti dengan 62
+  // - Kode negara lain tetap dipertahankan
   const normalizePhone = (phone: string): string => {
     const digitsOnly = phone.replace(/[^0-9]/g, "");
-    return digitsOnly.startsWith("62") ? "0" + digitsOnly.slice(2) : digitsOnly;
+    if (!digitsOnly) return "";
+    if (digitsOnly.startsWith("0")) return "62" + digitsOnly.slice(1);
+    return digitsOnly;
   };
 
   // Lookup customer saat nomor HP berubah
@@ -82,8 +87,8 @@ export default function Home() {
 
     const normalized = normalizePhone(value.trim());
 
-    // Hanya lookup jika format sudah valid (10-13 digit, mulai 08)
-    if (!/^08[0-9]{8,11}$/.test(normalized)) {
+    // Hanya lookup jika sudah cukup panjang (minimal 7 digit)
+    if (normalized.length < 7) {
       setIsLookingUp(false);
       return;
     }
@@ -277,7 +282,8 @@ export default function Home() {
     }
 
     try {
-      // Convert CalendarDateTime to ISO string
+      // Normalisasi nomor HP sebelum submit
+      const normalizedHP = normalizePhone(formData.nomorHP?.trim() || "");
       const waktuPenjemputanStr = formData.waktuPenjemputan ? formData.waktuPenjemputan : null;
 
       const response = await fetch("/api/orders", {
@@ -287,6 +293,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           ...formData,
+          nomorHP: normalizedHP,
           waktuPenjemputan: waktuPenjemputanStr,
         }),
       });

@@ -37,16 +37,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data: null }, { status: 200 });
   }
 
-  // Normalisasi nomor HP sebelum query
+  // Normalisasi nomor HP sebelum query (sama dengan logika frontend)
   const normalizePhone = (p: string): string => {
     const digitsOnly = p.replace(/[^0-9]/g, "");
-    return digitsOnly.startsWith("62") ? "0" + digitsOnly.slice(2) : digitsOnly;
+    if (!digitsOnly) return "";
+    if (digitsOnly.startsWith("0")) return "62" + digitsOnly.slice(1);
+    return digitsOnly;
   };
 
   const normalizedPhone = normalizePhone(phone);
 
-  // Validasi format setelah normalisasi
-  if (!/^08[0-9]{8,11}$/.test(normalizedPhone)) {
+  // Validasi minimal panjang
+  if (normalizedPhone.length < 7) {
     return NextResponse.json({ data: null }, { status: 200 });
   }
 

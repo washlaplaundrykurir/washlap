@@ -1,40 +1,55 @@
 /**
- * Utilities untuk normalisasi dan validasi nomor HP Indonesia.
- * Format standar: 08xxxxxxxxxx (10-13 digit, mulai dengan 08).
+ * Utilities untuk normalisasi nomor HP.
+ *
+ * Aturan normalisasi:
+ * - Strip semua karakter non-digit (+, -, spasi, kurung, dll)
+ * - Jika diawali 0 → ganti dengan 62 (kode negara Indonesia)
+ * - Kode negara lain tetap dipertahankan
+ *
+ * Contoh:
+ *   0812-3456-7890  → 6281234567890
+ *   +62 812 3456 7890 → 6281234567890
+ *   +1 818 853 6469  → 18188536469
+ *   +44 7526 756866  → 447526756866
  */
 
 /**
- * Normalisasi nomor HP ke format 08xxx.
+ * Normalisasi nomor HP:
  * - Strip semua karakter non-digit
- * - `62...` → `0...`
- * - `+62...` → `0...` (setelah strip jadi `62...`)
- *
- * Tidak melakukan validasi — hanya transformasi.
+ * - Jika diawali 0 → ganti dengan 62
  */
 export function normalizePhone(phone: string | null | undefined): string {
   if (!phone) return "";
+
+  // Strip semua karakter selain angka
   const digitsOnly = phone.replace(/[^0-9]/g, "");
-  if (digitsOnly.startsWith("62")) {
-    return "0" + digitsOnly.slice(2);
+
+  if (!digitsOnly) return "";
+
+  // Jika diawali 0, ganti dengan kode negara 62
+  if (digitsOnly.startsWith("0")) {
+    return "62" + digitsOnly.slice(1);
   }
+
   return digitsOnly;
 }
 
 /**
- * Cek apakah nomor (yang sudah dinormalisasi) sesuai format Indonesia yang valid.
- * Format: 08 + 8-11 digit = total 10-13 karakter.
+ * Cek apakah nomor sudah cukup panjang untuk dianggap valid (minimal 7 digit).
+ * Tidak membatasi kode negara — semua negara diterima.
  */
 export function isValidPhone(normalizedPhone: string): boolean {
-  return /^08[0-9]{8,11}$/.test(normalizedPhone);
+  return normalizedPhone.length >= 7;
 }
 
 /**
  * Normalisasi + validasi sekaligus.
- * Return null jika tidak valid.
+ * Return null jika terlalu pendek atau kosong.
  */
 export function normalizeAndValidatePhone(
   phone: string | null | undefined,
 ): string | null {
   const normalized = normalizePhone(phone);
+
   return isValidPhone(normalized) ? normalized : null;
 }

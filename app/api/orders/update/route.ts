@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { createSupabaseAdmin } from "@/utils/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { normalizeAndValidatePhone } from "@/lib/phone";
 
 export async function PUT(request: NextRequest) {
   const { user, error: authError } = await requireAdmin();
@@ -61,20 +60,22 @@ export async function PUT(request: NextRequest) {
 
     let finalCustomerId = customerId;
 
+    // Normalisasi nomor HP (dipakai di kedua branch)
+    const normalizePhone = (p: string): string => {
+      const digitsOnly = (p || "").replace(/[^0-9]/g, "");
+      if (!digitsOnly) return "";
+      if (digitsOnly.startsWith("0")) return "62" + digitsOnly.slice(1);
+      return digitsOnly;
+    };
+
     // 1. Handle Customer Data
     if (finalCustomerId) {
       const customerUpdate: Record<string, any> = {};
 
       if (nama !== undefined) customerUpdate.nama_terakhir = nama;
       if (phone !== undefined && phone !== null && phone !== "") {
-        const normalized = normalizeAndValidatePhone(phone);
-        if (!normalized) {
-          return NextResponse.json(
-            { error: "Format nomor HP tidak valid. Gunakan format 08xxx (10-13 digit)." },
-            { status: 400 },
-          );
-        }
-        customerUpdate.nomor_hp = normalized;
+        const normalized = normalizePhone(phone.trim());
+        if (normalized) customerUpdate.nomor_hp = normalized;
       }
 
       if (Object.keys(customerUpdate).length > 0) {
@@ -86,13 +87,7 @@ export async function PUT(request: NextRequest) {
         if (customerError) throw customerError;
       }
     } else if (phone) {
-      const normalizedPhone = normalizeAndValidatePhone(phone);
-      if (!normalizedPhone) {
-        return NextResponse.json(
-          { error: "Format nomor HP tidak valid. Gunakan format 08xxx (10-13 digit)." },
-          { status: 400 },
-        );
-      }
+      const normalizedPhone = normalizePhone(phone.trim());
 
       const { data: newCustomer, error: upsertError } = await supabaseAdmin
         .from("customers")

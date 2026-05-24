@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 import { createSupabaseAdmin, createClient } from "@/utils/supabase/server";
-import { normalizeAndValidatePhone } from "@/lib/phone";
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,14 +34,20 @@ export async function POST(request: NextRequest) {
     // Sanitize input to prevent duplicates due to whitespace
     const cleanNama = nama?.trim();
 
-    // Normalisasi + validasi nomor HP
-    const cleanNomorHP = normalizeAndValidatePhone(nomorHP);
+    // Normalisasi nomor HP ke format internasional
+    // - Strip semua karakter non-digit
+    // - Jika diawali 0 → ganti dengan 62
+    const normalizePhone = (p: string): string => {
+      const digitsOnly = (p || "").replace(/[^0-9]/g, "");
+      if (!digitsOnly) return "";
+      if (digitsOnly.startsWith("0")) return "62" + digitsOnly.slice(1);
+      return digitsOnly;
+    };
+    const cleanNomorHP = normalizePhone(nomorHP?.trim() || "");
+
     if (!cleanNomorHP) {
       return NextResponse.json(
-        {
-          error:
-            "Format nomor HP tidak valid. Gunakan format 08xxx atau +62xxx (10-13 digit).",
-        },
+        { error: "Nomor HP tidak boleh kosong." },
         { status: 400 },
       );
     }

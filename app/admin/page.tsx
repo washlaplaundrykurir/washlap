@@ -53,7 +53,9 @@ export default function AdminPage() {
 
   const normalizePhone = (phone: string): string => {
     const digitsOnly = phone.replace(/[^0-9]/g, "");
-    return digitsOnly.startsWith("62") ? "0" + digitsOnly.slice(2) : digitsOnly;
+    if (!digitsOnly) return "";
+    if (digitsOnly.startsWith("0")) return "62" + digitsOnly.slice(1);
+    return digitsOnly;
   };
 
   const handlePhoneChange = (value: string) => {
@@ -63,7 +65,7 @@ export default function AdminPage() {
     if (abortRef.current) abortRef.current.abort();
 
     const normalized = normalizePhone(value.trim());
-    if (!/^08[0-9]{8,11}$/.test(normalized)) {
+    if (normalized.length < 7) {
       setIsLookingUp(false);
       return;
     }
@@ -211,6 +213,7 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
+          nomorHP: normalizePhone(formData.nomorHP?.trim() || ""),
         }),
       });
 
