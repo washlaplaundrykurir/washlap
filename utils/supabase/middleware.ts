@@ -1,12 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
-import { jwtDecode } from "jwt-decode";
-
-interface JWTPayload {
-  sub: string;
-  email: string;
-  exp: number;
-}
 
 export async function updateSession(request: NextRequest) {
   const supabaseResponse = NextResponse.next({
@@ -31,18 +24,19 @@ export async function updateSession(request: NextRequest) {
 
   if (accessToken) {
     try {
-      // Decode JWT to get user info
-      const decoded = jwtDecode<JWTPayload>(accessToken);
+      // Verifikasi token ke Supabase server (bukan hanya decode base64)
+      const {
+        data: { user: authUser },
+        error,
+      } = await supabase.auth.getUser(accessToken);
 
-      // Check if token is expired
-      if (decoded.exp * 1000 > Date.now()) {
+      if (!error && authUser) {
         user = {
-          id: decoded.sub,
-          email: decoded.email,
+          id: authUser.id,
+          email: authUser.email,
         };
       }
     } catch {
-      // Invalid token, user remains null
       user = null;
     }
   }

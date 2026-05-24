@@ -1,6 +1,6 @@
 {
   "name": "washlap-laundry",
-  "version": "1.1.0",
+  "version": "1.4.0",
   "description": "Sistem manajemen laundry dengan dashboard admin dan kurir",
   "private": true,
   "scripts": {

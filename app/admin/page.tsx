@@ -13,7 +13,7 @@ import {
   ModalFooter,
   useDisclosure,
 } from "@heroui/modal";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ClipboardList, Truck, Package, Plus, Megaphone } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
@@ -39,6 +39,68 @@ export default function AdminPage() {
   const [userName, setUserName] = useState("");
 
   const orderModal = useDisclosure();
+  const autofillModal = useDisclosure();
+
+  // Auto-fill state
+  const [foundCustomer, setFoundCustomer] = useState<{
+    nama: string | null;
+    alamat: string | null;
+    googleMapsLink: string | null;
+  } | null>(null);
+  const [isLookingUp, setIsLookingUp] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const normalizePhone = (phone: string): string => {
+    const digitsOnly = phone.replace(/[^0-9]/g, "");
+    return digitsOnly.startsWith("62") ? "0" + digitsOnly.slice(2) : digitsOnly;
+  };
+
+  const handlePhoneChange = (value: string) => {
+    handleInputChange("nomorHP", value);
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (abortRef.current) abortRef.current.abort();
+
+    const normalized = normalizePhone(value.trim());
+    if (!/^08[0-9]{8,11}$/.test(normalized)) {
+      setIsLookingUp(false);
+      return;
+    }
+
+    setIsLookingUp(true);
+    debounceRef.current = setTimeout(async () => {
+      const controller = new AbortController();
+      abortRef.current = controller;
+      try {
+        const res = await fetch(
+          `/api/customers/lookup?phone=${encodeURIComponent(normalized)}`,
+          { signal: controller.signal },
+        );
+        const result = await res.json();
+        if (result.data && result.data.nama) {
+          setFoundCustomer(result.data);
+          autofillModal.onOpen();
+        }
+      } catch {
+        // Abaikan error / abort
+      } finally {
+        setIsLookingUp(false);
+      }
+    }, 600);
+  };
+
+  const handleApplyAutofill = () => {
+    if (!foundCustomer) return;
+    setFormData((prev) => ({
+      ...prev,
+      nama: foundCustomer.nama || prev.nama,
+      alamat: foundCustomer.alamat || prev.alamat,
+      googleMapsLink: foundCustomer.googleMapsLink || prev.googleMapsLink,
+    }));
+    autofillModal.onClose();
+    setFoundCustomer(null);
+  };
 
   const [formData, setFormData] = useState({
     nama: "",
@@ -405,14 +467,82 @@ export default function AdminPage() {
           </div>
         </CardBody>
       </Card>
+      {/* Autofill Confirmation Modal */}
+      <Modal
+        backdrop="blur"
+        isOpen={autofillModal.isOpen}
+        onOpenChange={autofillModal.onOpenChange}
+        size="sm"
+      >
+        <ModalContent className="bg-white dark:bg-gray-900 border border-black/10 dark:border-white/20">
+          {(onClose) => (
+            <>
+              <ModalHeader className="text-gray-900 dark:text-white text-base">
+                Data pelanggan ditemukan
+              </ModalHeader>
+              <ModalBody className="pb-2">
+                <p className="text-sm text-gray-600 dark:text-white/70 mb-3">
+                  Nomor ini pernah order sebelumnya. Gunakan data tersimpan?
+                </p>
+                <div className="bg-gray-50 dark:bg-white/5 rounded-lg p-3 space-y-1.5 text-sm">
+                  {foundCustomer?.nama && (
+                    <div>
+                      <span className="text-gray-400 text-xs">Nama</span>
+                      <p className="font-medium text-gray-800 dark:text-white">{foundCustomer.nama}</p>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-gray-400 text-xs">Alamat</span>
+                    {foundCustomer?.alamat ? (
+                      <p className="font-medium text-gray-800 dark:text-white line-clamp-2">{foundCustomer.alamat}</p>
+                    ) : (
+                      <p className="font-medium text-gray-400 dark:text-gray-500 italic">Belum pernah dimasukkan</p>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-gray-400 text-xs">Google Maps</span>
+                    {foundCustomer?.googleMapsLink ? (
+                      <p className="font-medium text-blue-500 truncate">{foundCustomer.googleMapsLink}</p>
+                    ) : (
+                      <p className="font-medium text-gray-400 dark:text-gray-500 italic">Belum pernah dimasukkan</p>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 dark:text-white/40 mt-2">
+                  Anda tetap bisa mengubah data ini setelah diisi.
+                </p>
+              </ModalBody>
+              <ModalFooter className="gap-2">
+                <Button
+                  variant="light"
+                  size="sm"
+                  onPress={() => {
+                    onClose();
+                    setFoundCustomer(null);
+                  }}
+                >
+                  Tidak, isi manual
+                </Button>
+                <Button
+                  color="primary"
+                  size="sm"
+                  onPress={handleApplyAutofill}
+                >
+                  Ya, gunakan data ini
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
       {/* Add Order Modal */}
       <Modal
         isOpen={orderModal.isOpen}
         scrollBehavior="inside"
         size="2xl"
         onClose={orderModal.onClose}
-      >
-        <ModalContent className="bg-white dark:bg-gray-900 max-h-[90vh]">
+      >        <ModalContent className="bg-white dark:bg-gray-900 max-h-[90vh]">
           <ModalHeader>Tambah Pesanan Baru</ModalHeader>
           <ModalBody className="overflow-y-auto">
             <div className="flex flex-col gap-4">
@@ -426,15 +556,22 @@ export default function AdminPage() {
 
               <Input
                 isRequired
-                label="Nama Pelanggan"
-                value={formData.nama}
-                onValueChange={(v) => handleInputChange("nama", v)}
+                label="Nomor HP"
+                description="Isi nomor HP terlebih dahulu — jika pernah order sebelumnya, data akan otomatis terisi."
+                placeholder="Contoh: 08123456789"
+                value={formData.nomorHP}
+                onValueChange={handlePhoneChange}
+                endContent={
+                  isLookingUp ? (
+                    <span className="text-xs text-primary animate-pulse whitespace-nowrap">mencari...</span>
+                  ) : null
+                }
               />
               <Input
                 isRequired
-                label="Nomor HP"
-                value={formData.nomorHP}
-                onValueChange={(v) => handleInputChange("nomorHP", v)}
+                label="Nama Pelanggan"
+                value={formData.nama}
+                onValueChange={(v) => handleInputChange("nama", v)}
               />
               <Textarea
                 isRequired

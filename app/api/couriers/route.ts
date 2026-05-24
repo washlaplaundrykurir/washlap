@@ -2,9 +2,13 @@
 import { NextResponse } from "next/server";
 
 import { createSupabaseAdmin } from "@/utils/supabase/server";
+import { requireAdmin } from "@/lib/api-auth";
 
 // GET - Get all couriers for assignment dropdown
 export async function GET() {
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const supabase = createSupabaseAdmin();
 

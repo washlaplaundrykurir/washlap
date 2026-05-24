@@ -1,43 +1,17 @@
 /* eslint-disable no-console */
 import { NextRequest, NextResponse } from "next/server";
-import { jwtDecode } from "jwt-decode";
-import { cookies } from "next/headers";
 
 import { createSupabaseAdmin } from "@/utils/supabase/server";
+import { requireKurir } from "@/lib/api-auth";
 import { calculateSLAKurir, calculateSLATiket } from "@/lib/sla-helper";
-
-interface JWTPayload {
-  sub: string;
-  email: string;
-  exp: number;
-}
 
 // GET - Get tasks assigned to the current courier
 export async function GET(request: NextRequest) {
+  const { user, error: authError } = await requireKurir();
+  if (authError) return authError;
+  const userId = user!.id;
+
   try {
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get("sb-access-token")?.value;
-
-    if (!accessToken) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
-    let userId: string | null = null;
-
-    try {
-      const decoded = jwtDecode<JWTPayload>(accessToken);
-
-      if (decoded.exp * 1000 > Date.now()) {
-        userId = decoded.sub;
-      }
-    } catch {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-    }
-
-    if (!userId) {
-      return NextResponse.json({ error: "Token expired" }, { status: 401 });
-    }
-
     const supabase = createSupabaseAdmin();
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
@@ -146,30 +120,11 @@ export async function GET(request: NextRequest) {
 
 // PUT - Update order status (for courier)
 export async function PUT(request: NextRequest) {
+  const { user, error: authError } = await requireKurir();
+  if (authError) return authError;
+  const userId = user!.id;
+
   try {
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get("sb-access-token")?.value;
-
-    if (!accessToken) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
-    let userId: string | null = null;
-
-    try {
-      const decoded = jwtDecode<JWTPayload>(accessToken);
-
-      if (decoded.exp * 1000 > Date.now()) {
-        userId = decoded.sub;
-      }
-    } catch {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-    }
-
-    if (!userId) {
-      return NextResponse.json({ error: "Token expired" }, { status: 401 });
-    }
-
     const supabase = createSupabaseAdmin();
     const { id, status_id } = await request.json();
 
@@ -177,6 +132,16 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json(
         { error: "Order ID dan status diperlukan" },
         { status: 400 },
+      );
+    }
+
+    // Kurir hanya boleh set status: 3 (Sudah Jemput) atau 5 (Sudah Antar)
+    // Status 7 (Dibatalkan) hanya boleh dilakukan admin
+    const ALLOWED_KURIR_STATUSES = [3, 5];
+    if (!ALLOWED_KURIR_STATUSES.includes(status_id)) {
+      return NextResponse.json(
+        { error: "Kurir hanya dapat mengubah status ke Sudah Jemput atau Sudah Antar" },
+        { status: 403 },
       );
     }
 
@@ -237,15 +202,15 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    // Log status change
-    console.log(
-      `Inserting log for order ${id}, new status: ${status_id}, by: ${userId}`,
-    );
-    await supabase.from("status_logs").insert({
+    // Log status change — error dicatat tapi tidak menggagalkan response
+    const { error: logError } = await supabase.from("status_logs").insert({
       permintaan_id: id,
       status_id_baru: status_id,
       changed_by: userId,
     });
+    if (logError) {
+      console.error(`Failed to insert status log for order ${id}:`, logError);
+    }
 
     return NextResponse.json({
       success: true,

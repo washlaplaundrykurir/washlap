@@ -3,20 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 import { createSupabaseAdmin, createClient } from "@/utils/supabase/server";
+import { requireAdmin } from "@/lib/api-auth";
 
 export async function PUT(request: NextRequest) {
+  const { user, error: authError } = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const supabaseAdmin = createSupabaseAdmin();
-    const cookieStore = await cookies();
-    const supabaseAuth = createClient(cookieStore);
-
-    const accessToken = cookieStore.get("sb-access-token")?.value;
-
-    const {
-      data: { user },
-    } = await supabaseAuth.auth.getUser(accessToken);
-
-    console.log("Update Order - Auth User:", user?.id, user?.email);
 
     const {
       orderId,
@@ -67,12 +61,20 @@ export async function PUT(request: NextRequest) {
 
     let finalCustomerId = customerId;
 
+    // Normalisasi nomor HP ke format 08xxx (dipakai di kedua branch)
+    const normalizePhone = (p: string): string => {
+      const digitsOnly = p.replace(/[^0-9]/g, "");
+      return digitsOnly.startsWith("62") ? "0" + digitsOnly.slice(2) : digitsOnly;
+    };
+
     // 1. Handle Customer Data
     if (finalCustomerId) {
       const customerUpdate: Record<string, any> = {};
 
       if (nama !== undefined) customerUpdate.nama_terakhir = nama;
-      if (phone !== undefined) customerUpdate.nomor_hp = phone;
+      if (phone !== undefined && phone !== null && phone !== "") {
+        customerUpdate.nomor_hp = normalizePhone(phone.trim());
+      }
 
       if (Object.keys(customerUpdate).length > 0) {
         const { error: customerError } = await supabaseAdmin
@@ -83,11 +85,6 @@ export async function PUT(request: NextRequest) {
         if (customerError) throw customerError;
       }
     } else if (phone) {
-      // Normalisasi nomor HP ke format 08xxx sebelum upsert
-      const normalizePhone = (p: string): string => {
-        const digitsOnly = p.replace(/[^0-9]/g, "");
-        return digitsOnly.startsWith("62") ? "0" + digitsOnly.slice(2) : digitsOnly;
-      };
       const normalizedPhone = normalizePhone(phone.trim());
 
       const { data: newCustomer, error: upsertError } = await supabaseAdmin
@@ -126,7 +123,7 @@ export async function PUT(request: NextRequest) {
       await supabaseAdmin.from("status_logs").insert({
         permintaan_id: orderId,
         status_id_baru: statusId,
-        changed_by: user?.id || null,
+        changed_by: user!.id,
       });
     }
 

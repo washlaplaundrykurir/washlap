@@ -1,12 +1,15 @@
 /* eslint-disable no-console */
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 
 import { createSupabaseAdmin } from "@/utils/supabase/server";
+import { requireAdmin } from "@/lib/api-auth";
 import { calculateSLANota } from "@/lib/sla-helper";
 
 // PUT - Confirm order with nota number
 export async function PUT(request: NextRequest) {
+  const { user, error: authError } = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const supabase = createSupabaseAdmin();
     const { id, nomor_nota } = await request.json();
@@ -18,7 +21,6 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Fetch current order data to get waktu_kurir_selesai
     const { data: order } = await supabase
       .from("permintaan")
       .select("waktu_kurir_selesai")
@@ -27,7 +29,6 @@ export async function PUT(request: NextRequest) {
 
     const waktuSelesai = new Date().toISOString();
 
-    // Build update data - only include nomor_nota if provided (for JEMPUT orders)
     const updateData: Record<string, unknown> = {
       status_id: 6,
       waktu_selesai: waktuSelesai,
@@ -39,49 +40,46 @@ export async function PUT(request: NextRequest) {
 
     if (order?.waktu_kurir_selesai) {
       const slaNota = calculateSLANota(order.waktu_kurir_selesai, waktuSelesai);
-
       if (slaNota) {
         updateData.sla_nota_menit = slaNota.minutes;
         updateData.sla_nota_status = slaNota.status;
       }
     }
 
-    // Update order: change status to 6 (Selesai)
-    // Only confirm orders that are in "Sudah Jemput" (3) or "Sudah Antar" (5) status
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get("sb-access-token")?.value;
-
-    // Get logged in user
-    const {
-      data: { user },
-    } = await supabase.auth.getUser(accessToken);
-    const userId = user?.id;
-
-    if (!userId) {
-      console.warn("Confirming order without user ID");
-    }
-
-    // Update order: change status to 6 (Selesai)
-    // Only confirm orders that are in "Sudah Jemput" (3) or "Sudah Antar" (5) status
     const { error: updateError } = await supabase
       .from("permintaan")
       .update(updateData)
       .eq("id", id)
-      .in("status_id", [3, 5]); // Only confirm orders that are waiting
+      .in("status_id", [3, 5]);
 
     if (updateError) {
       console.error("Confirm order error:", updateError);
-
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    // Log status change
-    console.log("Confirm Route: Inserting Log", { id, userId });
-    await supabase.from("status_logs").insert({
+    // Cek apakah update benar-benar mengubah baris (bisa 0 jika status sudah berubah — race condition)
+    // Supabase tidak return rowCount langsung, tapi kita bisa cek status terkini
+    const { data: updatedOrder } = await supabase
+      .from("permintaan")
+      .select("status_id")
+      .eq("id", id)
+      .single();
+
+    if (!updatedOrder || updatedOrder.status_id !== 6) {
+      return NextResponse.json(
+        { error: "Order sudah dikonfirmasi atau statusnya tidak valid" },
+        { status: 409 },
+      );
+    }
+
+    const { error: logError } = await supabase.from("status_logs").insert({
       permintaan_id: id,
       status_id_baru: 6,
-      changed_by: userId || null,
+      changed_by: user!.id,
     });
+    if (logError) {
+      console.error("Failed to insert status log for confirm:", logError);
+    }
 
     return NextResponse.json({
       success: true,
@@ -89,7 +87,6 @@ export async function PUT(request: NextRequest) {
     });
   } catch (error) {
     console.error("Server error:", error);
-
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

@@ -2,9 +2,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { createSupabaseAdmin } from "@/utils/supabase/server";
+import { requireAdmin } from "@/lib/api-auth";
 
 // GET - List all users
 export async function GET() {
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const supabase = createSupabaseAdmin();
 
@@ -27,6 +31,9 @@ export async function GET() {
 
 // POST - Create new user
 export async function POST(request: NextRequest) {
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const supabase = createSupabaseAdmin();
 
@@ -39,14 +46,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Default password if not provided
-    const finalPassword = password || "12345678";
+    // Password wajib diisi — tidak ada default password lemah
+    if (!password || password.trim().length < 8) {
+      return NextResponse.json(
+        { error: "Password wajib diisi dan minimal 8 karakter" },
+        { status: 400 },
+      );
+    }
 
     // Create user in auth.users
     const { data: authData, error: authError } =
       await supabase.auth.admin.createUser({
         email,
-        password: finalPassword,
+        password: password,
         email_confirm: true,
         user_metadata: {
           role,
@@ -92,6 +104,9 @@ export async function POST(request: NextRequest) {
 
 // PUT - Update user
 export async function PUT(request: NextRequest) {
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const supabase = createSupabaseAdmin();
 
@@ -147,6 +162,9 @@ export async function PUT(request: NextRequest) {
 
 // DELETE - Delete user
 export async function DELETE(request: NextRequest) {
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const supabase = createSupabaseAdmin();
 

@@ -5,9 +5,24 @@ import { NextResponse } from "next/server";
 import { supabaseUrl, supabaseServiceKey } from "@/utils/supabase/server";
 import { getSiteUrl } from "@/utils/get-url";
 
+// Daftar path relatif yang diizinkan untuk redirect setelah login
+const ALLOWED_REDIRECT_PATHS = ["/admin", "/kurir"];
+
+function isSafeRedirect(path: string): boolean {
+  // Hanya izinkan path relatif (tidak boleh mulai dengan // atau http)
+  if (!path.startsWith("/")) return false;
+  if (path.startsWith("//")) return false;
+  // Hanya izinkan path yang dikenal
+  return ALLOWED_REDIRECT_PATHS.some((allowed) => path.startsWith(allowed));
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const redirectTo = searchParams.get("redirectTo") || "/admin";
+  const rawRedirectTo = searchParams.get("redirectTo") || "/admin";
+
+  // Validasi redirect — tolak URL eksternal atau path tidak dikenal
+  const redirectTo = isSafeRedirect(rawRedirectTo) ? rawRedirectTo : "/admin";
+
   const cookieStore = await cookies();
 
   if (!supabaseUrl || !supabaseServiceKey) {
@@ -29,8 +44,6 @@ export async function GET(request: Request) {
           );
         } catch {
           // The `setAll` method was called from a Server Component.
-          // This can be ignored if you have middleware refreshing
-          // user sessions.
         }
       },
     },
@@ -40,7 +53,7 @@ export async function GET(request: Request) {
     provider: "google",
     options: {
       redirectTo: `${getSiteUrl()}auth/callback?next=${redirectTo}`,
-      skipBrowserRedirect: true, // PENTING: Agar return URL, bukan coba redirect sendiri
+      skipBrowserRedirect: true,
     },
   });
 

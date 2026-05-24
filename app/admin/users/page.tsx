@@ -76,7 +76,11 @@ export default function UsersPage() {
   const handleCreate = async () => {
     if (!formData.email?.trim() || !formData.role) {
       showToast("error", "Email dan Role wajib diisi!");
+      return;
+    }
 
+    if (!formData.password?.trim() || formData.password.trim().length < 8) {
+      showToast("error", "Password wajib diisi dan minimal 8 karakter!");
       return;
     }
 
@@ -361,8 +365,9 @@ export default function UsersPage() {
                 onValueChange={(v) => setFormData({ ...formData, email: v })}
               />
               <Input
-                label="Password (Opsional)"
-                placeholder="Default: 12345678"
+                isRequired
+                label="Password"
+                placeholder="Minimal 8 karakter"
                 type="password"
                 value={formData.password}
                 onValueChange={(v) => setFormData({ ...formData, password: v })}

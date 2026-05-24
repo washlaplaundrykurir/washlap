@@ -341,22 +341,6 @@ export default function KurirPage() {
                     </div>
 
                     <div className="flex gap-2">
-                      {/* Cancel Button */}
-                      <Button
-                        color="danger"
-                        isDisabled={isFinalized(order.status_id)}
-                        isLoading={actionLoading === order.id + "-cancel"}
-                        size="sm"
-                        variant="flat"
-                        onClick={() => {
-                          setActionLoading(order.id + "-cancel");
-                          updateStatus(order.id, 7);
-                        }}
-                      >
-                        <CheckCircle className="rotate-45" size={16} />{" "}
-                        Dibatalkan
-                      </Button>
-
                       {/* Complete Button */}
                       <Button
                         color="success"

@@ -2,8 +2,12 @@
 import { NextResponse } from "next/server";
 
 import { createSupabaseAdmin } from "@/utils/supabase/server";
+import { requireAdmin } from "@/lib/api-auth";
 
 export async function GET() {
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const supabase = createSupabaseAdmin();
 

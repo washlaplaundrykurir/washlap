@@ -1,38 +1,15 @@
 
 import { NextRequest, NextResponse } from "next/server";
-import { jwtDecode } from "jwt-decode";
-import { cookies } from "next/headers";
-import { createSupabaseAdmin } from "@/utils/supabase/server";
 
-interface JWTPayload {
-    sub: string;
-    email: string;
-    exp: number;
-}
+import { createSupabaseAdmin } from "@/utils/supabase/server";
+import { requireKurir } from "@/lib/api-auth";
 
 export async function GET(request: NextRequest) {
+    const { user, error: authError } = await requireKurir();
+    if (authError) return authError;
+    const userId = user!.id;
+
     try {
-        const cookieStore = await cookies();
-        const accessToken = cookieStore.get("sb-access-token")?.value;
-
-        if (!accessToken) {
-            return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-        }
-
-        let userId: string | null = null;
-        try {
-            const decoded = jwtDecode<JWTPayload>(accessToken);
-            if (decoded.exp * 1000 > Date.now()) {
-                userId = decoded.sub;
-            }
-        } catch {
-            return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-        }
-
-        if (!userId) {
-            return NextResponse.json({ error: "Token expired" }, { status: 401 });
-        }
-
         const supabase = createSupabaseAdmin();
         const { searchParams } = new URL(request.url);
         const startDate = searchParams.get("startDate");

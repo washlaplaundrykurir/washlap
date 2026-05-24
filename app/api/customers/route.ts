@@ -2,9 +2,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { createSupabaseAdmin } from "@/utils/supabase/server";
+import { requireAdmin } from "@/lib/api-auth";
 
 // GET - List all customers
 export async function GET() {
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const supabase = createSupabaseAdmin();
 
@@ -27,6 +31,9 @@ export async function GET() {
 
 // PUT - Update customer
 export async function PUT(request: NextRequest) {
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const supabase = createSupabaseAdmin();
 
@@ -62,6 +69,9 @@ export async function PUT(request: NextRequest) {
 
 // DELETE - Delete customer
 export async function DELETE(request: NextRequest) {
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
+
   try {
     const supabase = createSupabaseAdmin();
 
