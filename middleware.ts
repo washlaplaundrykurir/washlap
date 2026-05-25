@@ -64,7 +64,7 @@ export async function middleware(request: NextRequest) {
     // Get user role from auth_users table
     const { data: userData, error } = await supabase
       .from("auth_users")
-      .select("role")
+      .select("role, is_active")
       .eq("id", user.id)
       .single();
 
@@ -85,6 +85,11 @@ export async function middleware(request: NextRequest) {
 
     // Case 3: Role Authorization for Protected Routes
     if (isProtectedPath) {
+      // Cek apakah user aktif
+      if (userData?.is_active === false) {
+        return logoutAndRedirect(request, "account_disabled");
+      }
+
       // Protect /admin/users - only super-admin can access
       if (pathname.startsWith("/admin/users") && userRole !== "super-admin") {
         return NextResponse.redirect(new URL("/admin", request.url));

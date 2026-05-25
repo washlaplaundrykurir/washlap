@@ -14,7 +14,7 @@ export async function GET() {
 
     const { data: users, error } = await supabase
       .from("auth_users")
-      .select("id, email, role, full_name")
+      .select("id, email, role, full_name, is_active")
       .order("email");
 
     if (error) {
@@ -204,6 +204,56 @@ export async function DELETE(request: NextRequest) {
     });
   } catch (error) {
     console.error("Delete user error:", error);
+
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}
+
+// PATCH - Toggle aktif/nonaktif user
+export async function PATCH(request: NextRequest) {
+  const { user: adminUser, error: authError } = await requireAdmin();
+  if (authError) return authError;
+
+  try {
+    const supabase = createSupabaseAdmin();
+    const { id, is_active } = await request.json();
+
+    if (!id || is_active === undefined) {
+      return NextResponse.json(
+        { error: "User ID dan status is_active diperlukan" },
+        { status: 400 },
+      );
+    }
+
+    // Cegah admin menonaktifkan dirinya sendiri
+    if (id === adminUser!.id) {
+      return NextResponse.json(
+        { error: "Tidak dapat menonaktifkan akun sendiri" },
+        { status: 403 },
+      );
+    }
+
+    // Update kolom is_active di auth_users
+    const { error: updateError } = await supabase
+      .from("auth_users")
+      .update({ is_active })
+      .eq("id", id);
+
+    if (updateError) {
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    }
+
+    // Jika dinonaktifkan, paksa logout semua sesi user tersebut
+    if (!is_active) {
+      await supabase.auth.admin.signOut(id, "global");
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: is_active ? "User berhasil diaktifkan" : "User berhasil dinonaktifkan",
+    });
+  } catch (error) {
+    console.error("Toggle user status error:", error);
 
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }

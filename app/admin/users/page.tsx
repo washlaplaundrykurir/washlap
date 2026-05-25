@@ -15,7 +15,7 @@ import {
   useDisclosure,
 } from "@heroui/modal";
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { X, PowerOff, Power } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
 
@@ -24,6 +24,7 @@ interface User {
   email: string;
   role: string;
   full_name: string | null;
+  is_active: boolean;
 }
 
 const roleOptions = [
@@ -43,6 +44,7 @@ export default function UsersPage() {
   const createModal = useDisclosure();
   const editModal = useDisclosure();
   const deleteModal = useDisclosure();
+  const toggleModal = useDisclosure();
 
   // Form states
   const [formData, setFormData] = useState({
@@ -192,6 +194,46 @@ export default function UsersPage() {
     deleteModal.onOpen();
   };
 
+  const openToggleModal = (user: User) => {
+    setSelectedUser(user);
+    toggleModal.onOpen();
+  };
+
+  const handleToggleActive = async () => {
+    if (!selectedUser) return;
+
+    try {
+      setActionLoading(true);
+      const response = await fetch("/api/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedUser.id,
+          is_active: !selectedUser.is_active,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) throw new Error(result.error);
+
+      toggleModal.onClose();
+      setSelectedUser(null);
+      fetchUsers();
+      showToast(
+        "success",
+        selectedUser.is_active ? "User berhasil dinonaktifkan" : "User berhasil diaktifkan",
+      );
+    } catch (err) {
+      showToast(
+        "error",
+        err instanceof Error ? err.message : "Error mengubah status user",
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const resetForm = () => {
     setFormData({ email: "", password: "", role: "", full_name: "" });
     setSelectedUser(null);
@@ -282,6 +324,9 @@ export default function UsersPage() {
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-white/70">
                       Role
                     </th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-white/70">
+                      Status
+                    </th>
                     <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-white/70">
                       Aksi
                     </th>
@@ -292,7 +337,7 @@ export default function UsersPage() {
                     <tr>
                       <td
                         className="py-8 text-center text-gray-500 dark:text-white/50"
-                        colSpan={4}
+                        colSpan={5}
                       >
                         Belum ada user
                       </td>
@@ -301,7 +346,7 @@ export default function UsersPage() {
                     users.map((user) => (
                       <tr
                         key={user.id}
-                        className="border-b border-gray-100 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5"
+                        className={`border-b border-gray-100 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 ${!user.is_active ? "opacity-50" : ""}`}
                       >
                         <td className="py-3 px-4 text-gray-900 dark:text-white">
                           {user.full_name || "-"}
@@ -318,6 +363,15 @@ export default function UsersPage() {
                             {user.role.toUpperCase()}
                           </Chip>
                         </td>
+                        <td className="py-3 px-4">
+                          <Chip
+                            color={user.is_active ? "success" : "default"}
+                            size="sm"
+                            variant="flat"
+                          >
+                            {user.is_active ? "Aktif" : "Nonaktif"}
+                          </Chip>
+                        </td>
                         <td className="py-3 px-4 text-right">
                           <Button
                             className="mr-2"
@@ -326,6 +380,16 @@ export default function UsersPage() {
                             onClick={() => openEditModal(user)}
                           >
                             Edit
+                          </Button>
+                          <Button
+                            className="mr-2"
+                            color={user.is_active ? "warning" : "success"}
+                            size="sm"
+                            variant="light"
+                            startContent={user.is_active ? <PowerOff size={14} /> : <Power size={14} />}
+                            onClick={() => openToggleModal(user)}
+                          >
+                            {user.is_active ? "Nonaktifkan" : "Aktifkan"}
                           </Button>
                           <Button
                             color="danger"
@@ -453,6 +517,44 @@ export default function UsersPage() {
               onClick={handleUpdate}
             >
               Update
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Toggle Active Modal */}
+      <Modal isOpen={toggleModal.isOpen} onClose={toggleModal.onClose}>
+        <ModalContent className="bg-white dark:bg-gray-900">
+          <ModalHeader className={selectedUser?.is_active ? "text-warning" : "text-success"}>
+            {selectedUser?.is_active ? "Nonaktifkan User?" : "Aktifkan User?"}
+          </ModalHeader>
+          <ModalBody>
+            {selectedUser?.is_active ? (
+              <div className="flex flex-col gap-2">
+                <p className="text-gray-600 dark:text-white/70">
+                  User <strong>{selectedUser?.email}</strong> akan dinonaktifkan.
+                </p>
+                <p className="text-sm text-gray-500 dark:text-white/50">
+                  User tidak akan bisa login sampai diaktifkan kembali. Semua sesi aktif akan langsung diakhiri.
+                </p>
+              </div>
+            ) : (
+              <p className="text-gray-600 dark:text-white/70">
+                User <strong>{selectedUser?.email}</strong> akan diaktifkan kembali dan bisa login.
+              </p>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="light" onClick={toggleModal.onClose}>
+              Batal
+            </Button>
+            <Button
+              color={selectedUser?.is_active ? "warning" : "success"}
+              isLoading={actionLoading}
+              startContent={selectedUser?.is_active ? <PowerOff size={16} /> : <Power size={16} />}
+              onClick={handleToggleActive}
+            >
+              {selectedUser?.is_active ? "Ya, Nonaktifkan" : "Ya, Aktifkan"}
             </Button>
           </ModalFooter>
         </ModalContent>

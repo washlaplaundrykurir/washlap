@@ -6,7 +6,7 @@ import { Button } from "@heroui/button";
 import { RadioGroup, Radio } from "@heroui/radio";
 import { Checkbox, CheckboxGroup } from "@heroui/checkbox";
 import { Divider } from "@heroui/divider";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   Modal,
   ModalContent,
@@ -55,78 +55,12 @@ export default function Home() {
     null,
   );
 
-  // Auto-fill state
-  const [foundCustomer, setFoundCustomer] = useState<{
-    nama: string | null;
-    alamat: string | null;
-    googleMapsLink: string | null;
-  } | null>(null);
-  const [isLookingUp, setIsLookingUp] = useState(false);
-  const autofillModal = useDisclosure();
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
-
-  // Normalisasi nomor HP di frontend
-  // - Strip +, -, spasi, karakter non-digit
-  // - Jika diawali 0 → ganti dengan 62
-  // - Kode negara lain tetap dipertahankan
+  // Normalisasi nomor HP sebelum submit
   const normalizePhone = (phone: string): string => {
     const digitsOnly = phone.replace(/[^0-9]/g, "");
     if (!digitsOnly) return "";
     if (digitsOnly.startsWith("0")) return "62" + digitsOnly.slice(1);
     return digitsOnly;
-  };
-
-  // Lookup customer saat nomor HP berubah
-  const handlePhoneChange = (value: string) => {
-    handleInputChange("nomorHP", value);
-
-    // Cancel debounce sebelumnya
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (abortRef.current) abortRef.current.abort();
-
-    const normalized = normalizePhone(value.trim());
-
-    // Hanya lookup jika sudah cukup panjang (minimal 7 digit)
-    if (normalized.length < 7) {
-      setIsLookingUp(false);
-      return;
-    }
-
-    setIsLookingUp(true);
-    debounceRef.current = setTimeout(async () => {
-      const controller = new AbortController();
-      abortRef.current = controller;
-
-      try {
-        const res = await fetch(
-          `/api/customers/lookup?phone=${encodeURIComponent(normalized)}`,
-          { signal: controller.signal },
-        );
-        const result = await res.json();
-
-        if (result.data && result.data.nama) {
-          setFoundCustomer(result.data);
-          autofillModal.onOpen();
-        }
-      } catch {
-        // Abaikan error (termasuk abort)
-      } finally {
-        setIsLookingUp(false);
-      }
-    }, 600);
-  };
-
-  const handleApplyAutofill = () => {
-    if (!foundCustomer) return;
-    setFormData((prev) => ({
-      ...prev,
-      nama: foundCustomer.nama || prev.nama,
-      alamat: foundCustomer.alamat || prev.alamat,
-      googleMapsLink: foundCustomer.googleMapsLink || prev.googleMapsLink,
-    }));
-    autofillModal.onClose();
-    setFoundCustomer(null);
   };
 
   useEffect(() => {
@@ -445,17 +379,11 @@ export default function Home() {
                 inputWrapper:
                   "bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 hover:bg-black/10 dark:hover:bg-white/15 group-data-[focus=true]:bg-black/10 dark:group-data-[focus=true]:bg-white/15",
               }}
-              description="Isi nomor HP terlebih dahulu — jika pernah order sebelumnya, data anda akan otomatis terisi."
               label="Nomor HP"
               labelPlacement="outside"
               placeholder="Contoh: 08123456789"
               value={formData.nomorHP}
-              onValueChange={handlePhoneChange}
-              endContent={
-                isLookingUp ? (
-                  <span className="text-xs text-primary animate-pulse">mencari...</span>
-                ) : null
-              }
+              onValueChange={(value) => handleInputChange("nomorHP", value)}
             />
 
             {/* Nama */}
@@ -779,75 +707,6 @@ export default function Home() {
           </CardBody>
         </Card>
       </form>
-
-      {/* Autofill Confirmation Modal */}
-      <Modal
-        backdrop="blur"
-        isOpen={autofillModal.isOpen}
-        onOpenChange={autofillModal.onOpenChange}
-        size="sm"
-      >
-        <ModalContent className="bg-white dark:bg-gray-900 border border-black/10 dark:border-white/20">
-          {(onClose) => (
-            <>
-              <ModalHeader className="text-gray-900 dark:text-white text-base">
-                Data pelanggan ditemukan
-              </ModalHeader>
-              <ModalBody className="pb-2">
-                <p className="text-sm text-gray-600 dark:text-white/70 mb-3">
-                  Nomor ini pernah order sebelumnya. Gunakan data tersimpan?
-                </p>
-                <div className="bg-gray-50 dark:bg-white/5 rounded-lg p-3 space-y-1.5 text-sm">
-                  {foundCustomer?.nama && (
-                    <div>
-                      <span className="text-gray-400 text-xs">Nama</span>
-                      <p className="font-medium text-gray-800 dark:text-white">{foundCustomer.nama}</p>
-                    </div>
-                  )}
-                  <div>
-                    <span className="text-gray-400 text-xs">Alamat</span>
-                    {foundCustomer?.alamat ? (
-                      <p className="font-medium text-gray-800 dark:text-white line-clamp-2">{foundCustomer.alamat}</p>
-                    ) : (
-                      <p className="font-medium text-gray-400 dark:text-gray-500 italic">Belum pernah dimasukkan</p>
-                    )}
-                  </div>
-                  <div>
-                    <span className="text-gray-400 text-xs">Google Maps</span>
-                    {foundCustomer?.googleMapsLink ? (
-                      <p className="font-medium text-blue-500 truncate">{foundCustomer.googleMapsLink}</p>
-                    ) : (
-                      <p className="font-medium text-gray-400 dark:text-gray-500 italic">Belum pernah dimasukkan</p>
-                    )}
-                  </div>
-                </div>
-                <p className="text-xs text-gray-400 dark:text-white/40 mt-2">
-                  Anda tetap bisa mengubah data ini setelah diisi.
-                </p>
-              </ModalBody>
-              <ModalFooter className="gap-2">
-                <Button
-                  variant="light"
-                  size="sm"
-                  onPress={() => {
-                    onClose();
-                    setFoundCustomer(null);
-                  }}
-                >
-                  Tidak, isi manual
-                </Button>
-                <Button
-                  color="primary"
-                  size="sm"
-                  onPress={handleApplyAutofill}
-                >
-                  Ya, gunakan data ini
-                </Button>
-              </ModalFooter>
-            </>
-          )}
-        </ModalContent>
-      </Modal>
 
       {/* Success Modal */}
       <Modal

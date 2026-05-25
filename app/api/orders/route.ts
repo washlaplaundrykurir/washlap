@@ -53,14 +53,39 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Upsert customer (based on nomor_hp)
+    // Jika alamat kosong atau hanya "-", ambil dari data customer sebelumnya
+    const isAlamatKosong = !alamat || alamat.trim() === "" || alamat.trim() === "-";
+    const isGmapsKosong = !googleMapsLink || googleMapsLink.trim() === "" || googleMapsLink.trim() === "-";
+
+    let finalAlamat = alamat;
+    let finalGoogleMapsLink = googleMapsLink;
+
+    if (isAlamatKosong || isGmapsKosong) {
+      // Cek apakah customer sudah pernah order sebelumnya
+      const { data: existingCustomer } = await supabase
+        .from("customers")
+        .select("alamat_terakhir, google_maps_terakhir")
+        .eq("nomor_hp", cleanNomorHP)
+        .single();
+
+      if (existingCustomer) {
+        if (isAlamatKosong && existingCustomer.alamat_terakhir) {
+          finalAlamat = existingCustomer.alamat_terakhir;
+        }
+        if (isGmapsKosong && existingCustomer.google_maps_terakhir) {
+          finalGoogleMapsLink = existingCustomer.google_maps_terakhir;
+        }
+      }
+    }
+
     const { data: customer, error: customerError } = await supabase
       .from("customers")
       .upsert(
         {
           nomor_hp: cleanNomorHP,
           nama_terakhir: cleanNama,
-          alamat_terakhir: alamat,
-          google_maps_terakhir: googleMapsLink,
+          alamat_terakhir: finalAlamat || null,
+          google_maps_terakhir: finalGoogleMapsLink || null,
         },
         {
           onConflict: "nomor_hp",
@@ -121,8 +146,8 @@ export async function POST(request: NextRequest) {
           status_id: 1, // "Baru"
           nomor_tiket: nomorTiket,
           jenis_tugas: type, // Now a single ENUM value, not an array
-          alamat_jalan: alamat,
-          google_maps_link: googleMapsLink,
+          alamat_jalan: finalAlamat || alamat,
+          google_maps_link: finalGoogleMapsLink || googleMapsLink,
           waktu_order: now.toISOString(),
           waktu_penjemputan: waktuPenjemputan
             ? new Date(waktuPenjemputan + "+07:00").toISOString()
