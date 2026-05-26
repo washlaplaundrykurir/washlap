@@ -8,6 +8,7 @@ import { calculateSLAKurir, calculateSLATiket } from "@/lib/sla-helper";
 // GET - Get tasks assigned to the current courier
 export async function GET(request: NextRequest) {
   const { user, error: authError } = await requireKurir();
+
   if (authError) return authError;
   const userId = user!.id;
 
@@ -121,6 +122,7 @@ export async function GET(request: NextRequest) {
 // PUT - Update order status (for courier)
 export async function PUT(request: NextRequest) {
   const { user, error: authError } = await requireKurir();
+
   if (authError) return authError;
   const userId = user!.id;
 
@@ -135,12 +137,16 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Kurir hanya boleh set status: 3 (Sudah Jemput) atau 5 (Sudah Antar)
-    // Status 7 (Dibatalkan) hanya boleh dilakukan admin
-    const ALLOWED_KURIR_STATUSES = [3, 5];
+    // Kurir hanya boleh set status: 3 (Sudah Jemput), 5 (Sudah Antar),
+    // atau 7 (Dibatalkan) — khusus 7 hanya boleh saat status saat ini = 2 (Ditugaskan)
+    const ALLOWED_KURIR_STATUSES = [3, 5, 7];
+
     if (!ALLOWED_KURIR_STATUSES.includes(status_id)) {
       return NextResponse.json(
-        { error: "Kurir hanya dapat mengubah status ke Sudah Jemput atau Sudah Antar" },
+        {
+          error:
+            "Kurir hanya dapat mengubah status ke Sudah Jemput, Sudah Antar, atau Dibatalkan",
+        },
         { status: 403 },
       );
     }
@@ -148,7 +154,7 @@ export async function PUT(request: NextRequest) {
     // Verify this order belongs to the courier
     const { data: order, error: fetchError } = await supabase
       .from("permintaan")
-      .select("courier_id, waktu_penjemputan, waktu_assigned")
+      .select("courier_id, waktu_penjemputan, waktu_assigned, status_id")
       .eq("id", id)
       .single();
 
@@ -166,6 +172,16 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Guard cancel kurir: hanya boleh saat status masih "Ditugaskan" (2)
+    if (status_id === 7 && order.status_id !== 2) {
+      return NextResponse.json(
+        {
+          error: "Tiket hanya dapat dibatalkan saat masih berstatus Ditugaskan",
+        },
+        { status: 403 },
+      );
+    }
+
     // Update the order
     const updateData: Record<string, unknown> = { status_id };
 
@@ -173,6 +189,7 @@ export async function PUT(request: NextRequest) {
 
     if (status_id === 3 || status_id === 5) {
       const kurirSelesai = new Date().toISOString();
+
       updateData.waktu_kurir_selesai = kurirSelesai;
 
       // Calculate SLA Tiket & Kurir
@@ -208,6 +225,7 @@ export async function PUT(request: NextRequest) {
       status_id_baru: status_id,
       changed_by: userId,
     });
+
     if (logError) {
       console.error(`Failed to insert status log for order ${id}:`, logError);
     }

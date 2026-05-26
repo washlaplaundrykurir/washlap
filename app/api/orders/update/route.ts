@@ -35,7 +35,8 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Guard: hanya boleh batalkan (status 7) jika order masih status Baru (1)
+    // Guard: tiket yang sudah ditugaskan (status >= 2) hanya bisa dibatalkan oleh admin,
+    // bukan super-admin
     if (statusId === 7) {
       const { data: currentOrder, error: fetchError } = await supabaseAdmin
         .from("permintaan")
@@ -50,9 +51,9 @@ export async function PUT(request: NextRequest) {
         );
       }
 
-      if (currentOrder.status_id >= 2) {
+      if (currentOrder.status_id >= 2 && user!.role === "super-admin") {
         return NextResponse.json(
-          { error: "Tiket yang sudah ditugaskan tidak dapat dibatalkan" },
+          { error: "Tiket yang sudah ditugaskan hanya dapat dibatalkan oleh admin" },
           { status: 403 },
         );
       }

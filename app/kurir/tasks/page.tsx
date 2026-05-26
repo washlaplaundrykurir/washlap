@@ -5,6 +5,14 @@ import { Button } from "@heroui/button";
 import { Chip } from "@heroui/chip";
 import { Spinner } from "@heroui/spinner";
 import { Tabs, Tab } from "@heroui/tabs";
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  useDisclosure,
+} from "@heroui/modal";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -17,9 +25,9 @@ import {
   ExternalLink,
   ShoppingBasket,
   FileText,
-  X,
   Check,
   Copy,
+  Trash2,
 } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
@@ -73,6 +81,10 @@ export default function KurirTasksPage() {
   const [activeTab, setActiveTab] = useState("all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const { showToast } = useToast();
+
+  // Cancel modal
+  const cancelModal = useDisclosure();
+  const [cancelTarget, setCancelTarget] = useState<Order | null>(null);
 
   useEffect(() => {
     fetchTasks();
@@ -128,11 +140,26 @@ export default function KurirTasksPage() {
   };
 
   const copyPhone = (phone: string) => {
-    navigator.clipboard.writeText(phone).then(() => {
-      showToast("success", `Nomor ${phone} disalin!`);
-    }).catch(() => {
-      showToast("error", "Gagal menyalin nomor.");
-    });
+    navigator.clipboard
+      .writeText(phone)
+      .then(() => {
+        showToast("success", `Nomor ${phone} disalin!`);
+      })
+      .catch(() => {
+        showToast("error", "Gagal menyalin nomor.");
+      });
+  };
+
+  const handleOpenCancel = (order: Order) => {
+    setCancelTarget(order);
+    cancelModal.onOpen();
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!cancelTarget) return;
+    await updateStatus(cancelTarget.id, 7);
+    cancelModal.onClose();
+    setCancelTarget(null);
   };
 
   const formatDate = (dateString: string) => {
@@ -255,11 +282,13 @@ export default function KurirTasksPage() {
                   {/* Customer Info */}
                   <div className="text-sm">
                     <p className="text-gray-900 dark:text-white font-medium flex items-center gap-1 min-w-0">
-                      <User size={14} className="shrink-0" />{" "}
-                      <span className="truncate">{order.customers?.nama_terakhir || "Unknown"}</span>
+                      <User className="shrink-0" size={14} />{" "}
+                      <span className="truncate">
+                        {order.customers?.nama_terakhir || "Unknown"}
+                      </span>
                     </p>
                     <div className="flex items-center gap-2 mt-1 min-w-0">
-                      <Phone size={14} className="text-gray-400 shrink-0" />
+                      <Phone className="text-gray-400 shrink-0" size={14} />
                       <span className="text-gray-700 dark:text-white/80 font-medium truncate">
                         {order.customers?.nomor_hp || "-"}
                       </span>
@@ -315,6 +344,17 @@ export default function KurirTasksPage() {
                     </span>
 
                     <div className="flex gap-2">
+                      {/* Cancel Button — hanya boleh saat status Ditugaskan (2) */}
+                      {order.status_id === 2 && (
+                        <Button
+                          color="danger"
+                          size="sm"
+                          variant="flat"
+                          onClick={() => handleOpenCancel(order)}
+                        >
+                          <Trash2 size={16} /> Batalkan
+                        </Button>
+                      )}
                       {/* Complete Button */}
                       <Button
                         color="success"
@@ -340,6 +380,48 @@ export default function KurirTasksPage() {
           ))}
         </div>
       )}
+
+      {/* Cancel Confirmation Modal */}
+      <Modal
+        backdrop="blur"
+        isOpen={cancelModal.isOpen}
+        size="md"
+        onClose={cancelModal.onClose}
+      >
+        <ModalContent className="bg-white dark:bg-zinc-900 border border-divider">
+          <ModalHeader className="flex flex-col gap-1 pb-4 pt-6 px-6">
+            <h2 className="text-xl font-black text-danger">Batalkan Tiket?</h2>
+          </ModalHeader>
+          <ModalBody className="py-2 px-6">
+            <p className="text-sm font-medium text-gray-500">
+              Apakah Anda yakin ingin membatalkan tiket{" "}
+              <span className="font-bold text-gray-900 dark:text-white">
+                {cancelTarget?.nomor_tiket}
+              </span>
+              ? Tindakan ini tidak dapat dibatalkan.
+            </p>
+          </ModalBody>
+          <ModalFooter className="pb-6 pt-4 px-6 flex gap-2">
+            <Button
+              className="font-bold flex-1"
+              isDisabled={actionLoading === cancelTarget?.id}
+              variant="light"
+              onPress={cancelModal.onClose}
+            >
+              Tidak, Kembali
+            </Button>
+            <Button
+              className="font-black flex-1 shadow-lg shadow-danger-500/20"
+              color="danger"
+              isLoading={actionLoading === cancelTarget?.id}
+              startContent={<Trash2 size={18} />}
+              onPress={handleConfirmCancel}
+            >
+              Ya, Batalkan
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

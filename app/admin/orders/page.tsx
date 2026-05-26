@@ -82,6 +82,7 @@ function OrdersPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [userRole, setUserRole] = useState<string>("");
   const { showToast } = useToast();
 
   // Sorting State
@@ -103,7 +104,20 @@ function OrdersPageContent() {
 
   useEffect(() => {
     fetchOrders();
+    fetchUserRole();
   }, []);
+
+  const fetchUserRole = async () => {
+    try {
+      const res = await fetch("/api/users/me");
+      if (res.ok) {
+        const result = await res.json();
+        setUserRole(result.user?.role || "");
+      }
+    } catch {
+      // Ignore — role default kosong
+    }
+  };
 
   const fetchOrders = async () => {
     try {
@@ -469,8 +483,12 @@ function OrdersPageContent() {
                     color="danger"
                     variant="flat"
                     className="h-10 w-10 min-w-10 rounded-xl"
-                    isDisabled={order.status_id >= 2}
-                    title={order.status_id >= 2 ? "Tiket yang sudah ditugaskan tidak dapat dibatalkan" : "Batalkan tiket"}
+                    isDisabled={userRole === "super-admin" && order.status_id >= 2}
+                    title={
+                      userRole === "super-admin" && order.status_id >= 2
+                        ? "Tiket yang sudah ditugaskan hanya dapat dibatalkan oleh admin"
+                        : "Batalkan tiket"
+                    }
                     onPress={() => handleOpenCancel(order)}
                   >
                     <Trash2 size={18} />

@@ -7,6 +7,15 @@ dan proyek ini mengikuti [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ---
 
+## [1.4.1] - 2026-05-26
+
+### Changed
+- **LOGIC-04** Kurir kini bisa membatalkan tiket yang sudah ditugaskan kepadanya — hanya berlaku saat status tiket masih "Ditugaskan" (`status_id = 2`). Setelah kurir menandai "Sudah Jemput"/"Sudah Antar", tombol Batalkan tidak lagi tersedia.
+  - API `PUT /api/kurir/tasks` menerima `status_id = 7` dengan guard: tolak jika status saat ini bukan 2.
+  - Tombol "Batalkan" + modal konfirmasi ditambahkan di `app/kurir/page.tsx` dan `app/kurir/tasks/page.tsx`, hanya tampil saat `status_id === 2`.
+
+---
+
 ## [1.4.0] - 2026-05-23
 
 ### Security
