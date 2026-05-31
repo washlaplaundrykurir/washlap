@@ -165,6 +165,37 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Order ID diperlukan" }, { status: 400 });
     }
 
+    // Authoritative guard: an assignment to a courier is only allowed when that
+    // courier account exists, has the `kurir` role, and is still active. This
+    // closes the gap where a disabled courier could be assigned via a stale
+    // client cache or a direct API call (the dropdown filter alone is not
+    // sufficient). Unassigning (courier_id === null) is always allowed.
+    if (courier_id) {
+      const { data: courier, error: courierError } = await supabase
+        .from("auth_users")
+        .select("id, role, is_active")
+        .eq("id", courier_id)
+        .maybeSingle();
+
+      if (courierError) {
+        return NextResponse.json({ error: courierError.message }, { status: 500 });
+      }
+
+      if (!courier || courier.role !== "kurir") {
+        return NextResponse.json(
+          { error: "Kurir tidak ditemukan" },
+          { status: 400 },
+        );
+      }
+
+      if (!courier.is_active) {
+        return NextResponse.json(
+          { error: "Kurir sudah dinonaktifkan dan tidak dapat ditugaskan" },
+          { status: 400 },
+        );
+      }
+    }
+
     const updateData: Record<string, unknown> = {};
 
     if (status_id !== undefined) updateData.status_id = status_id;

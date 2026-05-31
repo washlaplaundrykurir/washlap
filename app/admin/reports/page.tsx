@@ -26,6 +26,7 @@ import {
 import * as XLSX from "xlsx";
 
 import { useToast } from "@/components/ToastProvider";
+import { WIB_TIME_ZONE } from "@/lib/datetime";
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState("rekap");
@@ -258,6 +259,7 @@ export default function ReportsPage() {
         day: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
+        timeZone: WIB_TIME_ZONE,
       });
     } catch {
       return dateStr;

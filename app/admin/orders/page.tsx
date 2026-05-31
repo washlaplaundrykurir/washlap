@@ -40,6 +40,7 @@ import {
 
 import { useToast } from "@/components/ToastProvider";
 import { useCouriers, useStatuses } from "@/hooks/use-master-data";
+import { formatDateTimeWIB, formatTimeAgoWIB } from "@/lib/datetime";
 
 interface Order {
   id: string;
@@ -242,29 +243,9 @@ function OrdersPageContent() {
     }
   };
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "-";
-    return new Date(dateString).toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "UTC",
-    });
-  };
+  const formatDate = (dateString: string | null) => formatDateTimeWIB(dateString);
 
-  const getTimeAgo = (dateString: string) => {
-    const now = new Date();
-    const orderDate = new Date(dateString);
-    const diffInMinutes = Math.floor(
-      (now.getTime() - (orderDate.getTime() - 7 * 3600000)) / 60000,
-    );
-
-    if (diffInMinutes < 1) return "Baru saja";
-    if (diffInMinutes < 60) return `${diffInMinutes}m lalu`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}j lalu`;
-    return `${Math.floor(diffInMinutes / 1440)}h lalu`;
-  };
+  const getTimeAgo = (dateString: string) => formatTimeAgoWIB(dateString);
 
   const sortedOrders = useMemo(() => {
     let list = [...orders];

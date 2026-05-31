@@ -14,6 +14,17 @@ import { createSupabaseAdmin } from "@/utils/supabase/server";
 
 export type UserRole = "admin" | "super-admin" | "kurir";
 
+// Umur cookie sesi (samakan dengan login route)
+const SESSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 hari
+
+const sessionCookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  maxAge: SESSION_COOKIE_MAX_AGE,
+  path: "/",
+};
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -37,6 +48,7 @@ export async function requireAuth(
 ): Promise<AuthResult> {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("sb-access-token")?.value;
+  const refreshToken = cookieStore.get("sb-refresh-token")?.value;
 
   if (!accessToken) {
     return {
@@ -51,10 +63,34 @@ export async function requireAuth(
   const supabase = createSupabaseAdmin();
 
   // Verifikasi token ke Supabase server — ini yang benar, bukan jwtDecode
-  const {
+  let {
     data: { user: authUser },
     error: authError,
   } = await supabase.auth.getUser(accessToken);
+
+  // Access token expired/invalid: coba refresh pakai refresh token yang tersimpan.
+  // Cookie httpOnly tidak bisa di-refresh dari client, jadi diperbarui di sini.
+  if ((authError || !authUser) && refreshToken) {
+    const { data: refreshed, error: refreshError } =
+      await supabase.auth.refreshSession({ refresh_token: refreshToken });
+
+    if (!refreshError && refreshed.session && refreshed.user) {
+      authUser = refreshed.user;
+      authError = null;
+
+      // Tulis ulang cookie dengan token baru (access + refresh yang dirotasi)
+      cookieStore.set(
+        "sb-access-token",
+        refreshed.session.access_token,
+        sessionCookieOptions,
+      );
+      cookieStore.set(
+        "sb-refresh-token",
+        refreshed.session.refresh_token,
+        sessionCookieOptions,
+      );
+    }
+  }
 
   if (authError || !authUser) {
     return {

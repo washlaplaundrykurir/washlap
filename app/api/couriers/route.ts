@@ -16,6 +16,7 @@ export async function GET() {
       .from("auth_users")
       .select("id, email, full_name")
       .eq("role", "kurir")
+      .eq("is_active", true)
       .order("full_name");
 
     if (error) {

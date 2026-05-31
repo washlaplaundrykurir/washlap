@@ -18,6 +18,7 @@ import Link from "next/link";
 import { X, MapPin } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
+import { formatDateWIB } from "@/lib/datetime";
 
 interface Customer {
   id: string;
@@ -148,13 +149,7 @@ export default function CustomersPage() {
       c.alamat_terakhir?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  };
+  const formatDate = (dateString: string) => formatDateWIB(dateString);
 
   return (
     <>

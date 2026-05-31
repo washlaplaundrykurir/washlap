@@ -9,6 +9,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { History, ArrowLeft, Inbox, User, MapPin } from "lucide-react";
 
+import { formatDateTimeWIB } from "@/lib/datetime";
+
 interface Order {
   id: string;
   nomor_tiket: string;
@@ -92,15 +94,7 @@ export default function KurirHistoryPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const formatDate = (dateString: string) => formatDateTimeWIB(dateString);
 
   return (
     <div className="max-w-4xl mx-auto">

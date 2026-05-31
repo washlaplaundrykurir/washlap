@@ -26,6 +26,8 @@ import { Button } from "@heroui/button";
 import { Select, SelectItem } from "@heroui/select";
 import { History, RefreshCw } from "lucide-react";
 
+import { formatDateTimeWIB, formatTimeWIB } from "@/lib/datetime";
+
 interface Order {
   id: string;
   nomor_tiket: string;
@@ -215,22 +217,9 @@ export default function RiwayatPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const formatDate = (dateString: string) => formatDateTimeWIB(dateString);
 
-  const formatTimeOnly = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString("id-ID", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const formatTimeOnly = (dateString: string) => formatTimeWIB(dateString);
 
   const [sortDescriptor, setSortDescriptor] = useState({
     column: "waktu_order",

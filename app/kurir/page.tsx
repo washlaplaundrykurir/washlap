@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
+import { WIB_TIME_ZONE } from "@/lib/datetime";
 
 interface Order {
   id: string;
@@ -189,7 +190,7 @@ export default function KurirPage() {
           hour: "2-digit",
           minute: "2-digit",
           hour12: false,
-          timeZone: "UTC",
+          timeZone: WIB_TIME_ZONE,
         })
         .replace(/\./g, ":") + " WIB"
     );

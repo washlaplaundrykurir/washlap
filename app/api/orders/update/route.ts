@@ -59,6 +59,37 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    // Authoritative guard: assigning to a courier requires that courier to
+    // exist, have the `kurir` role, and still be active. Mirrors the guard in
+    // PUT /api/tasks so a disabled courier cannot be assigned from any edit
+    // path (stale client cache or direct API call). Clearing the courier
+    // (courierId === "" or null) is always allowed.
+    if (courierId !== undefined && courierId !== null && courierId !== "") {
+      const { data: courier, error: courierError } = await supabaseAdmin
+        .from("auth_users")
+        .select("id, role, is_active")
+        .eq("id", courierId)
+        .maybeSingle();
+
+      if (courierError) {
+        return NextResponse.json({ error: courierError.message }, { status: 500 });
+      }
+
+      if (!courier || courier.role !== "kurir") {
+        return NextResponse.json(
+          { error: "Kurir tidak ditemukan" },
+          { status: 400 },
+        );
+      }
+
+      if (!courier.is_active) {
+        return NextResponse.json(
+          { error: "Kurir sudah dinonaktifkan dan tidak dapat ditugaskan" },
+          { status: 400 },
+        );
+      }
+    }
+
     let finalCustomerId = customerId;
 
     // Normalisasi nomor HP (dipakai di kedua branch)

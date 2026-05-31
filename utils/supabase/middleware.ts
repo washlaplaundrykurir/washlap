@@ -19,6 +19,7 @@ export async function updateSession(request: NextRequest) {
 
   // Get access token from cookie
   const accessToken = request.cookies.get("sb-access-token")?.value;
+  const refreshToken = request.cookies.get("sb-refresh-token")?.value;
 
   let user = null;
 
@@ -35,6 +36,37 @@ export async function updateSession(request: NextRequest) {
           id: authUser.id,
           email: authUser.email,
         };
+      } else if (refreshToken) {
+        // Access token expired: coba refresh agar sesi tidak putus saat navigasi
+        const { data: refreshed, error: refreshError } =
+          await supabase.auth.refreshSession({ refresh_token: refreshToken });
+
+        if (!refreshError && refreshed.session && refreshed.user) {
+          user = {
+            id: refreshed.user.id,
+            email: refreshed.user.email,
+          };
+
+          // Set cookie token baru pada response yang diteruskan ke browser
+          const cookieOptions = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax" as const,
+            maxAge: 60 * 60 * 24 * 7,
+            path: "/",
+          };
+
+          supabaseResponse.cookies.set(
+            "sb-access-token",
+            refreshed.session.access_token,
+            cookieOptions,
+          );
+          supabaseResponse.cookies.set(
+            "sb-refresh-token",
+            refreshed.session.refresh_token,
+            cookieOptions,
+          );
+        }
       }
     } catch {
       user = null;

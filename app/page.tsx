@@ -218,6 +218,17 @@ export default function Home() {
     try {
       // Normalisasi nomor HP sebelum submit
       const normalizedHP = normalizePhone(formData.nomorHP?.trim() || "");
+
+      // Validasi panjang nomor HP setelah normalisasi
+      if (!normalizedHP || normalizedHP.length < 7 || normalizedHP.length > 15) {
+        setSubmitStatus({
+          type: "error",
+          message: "Nomor HP tidak valid. Pastikan format: 08xxx atau 628xxx (7-15 digit).",
+        });
+        setIsLoading(false);
+        return;
+      }
+
       const waktuPenjemputanStr = formData.waktuPenjemputan ? formData.waktuPenjemputan : null;
 
       const response = await fetch("/api/orders", {

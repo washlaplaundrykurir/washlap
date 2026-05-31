@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
+import { formatDateTimeWIB } from "@/lib/datetime";
 
 interface Order {
   id: string;
@@ -381,17 +382,7 @@ export default function SelesaiPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "-";
-
-    return new Date(dateString).toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const formatDate = (dateString: string) => formatDateTimeWIB(dateString);
 
   return (
     <>

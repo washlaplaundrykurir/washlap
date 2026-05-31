@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
+import { formatDateTimeWIB } from "@/lib/datetime";
 
 interface Order {
   id: string;
@@ -162,14 +163,7 @@ export default function KurirTasksPage() {
     setCancelTarget(null);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const formatDate = (dateString: string) => formatDateTimeWIB(dateString);
 
   // Get complete button label based on jenis_tugas
   const getCompleteLabel = (jenisTugas: string) => {
