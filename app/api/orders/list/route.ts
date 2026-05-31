@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { createSupabaseAdmin } from "@/utils/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
+import { wibDayStartUtc, wibDayEndExclusiveUtc } from "@/lib/datetime";
 
 export async function GET(request: NextRequest) {
   const { error: authError } = await requireAdmin();
@@ -56,13 +57,13 @@ export async function GET(request: NextRequest) {
     const dateField = searchParams.get("dateField") || "waktu_order";
 
     if (startDate) {
-      query = query.gte(dateField, startDate);
+      const lower = wibDayStartUtc(startDate);
+      if (lower) query = query.gte(dateField, lower);
     }
     if (endDate) {
-      // Add one day to include the end date fully
-      const nextDay = new Date(endDate);
-      nextDay.setDate(nextDay.getDate() + 1);
-      query = query.lt(dateField, nextDay.toISOString().split("T")[0]);
+      // Exclusive upper bound = start of the next WIB day.
+      const upper = wibDayEndExclusiveUtc(endDate);
+      if (upper) query = query.lt(dateField, upper);
     }
 
     // Filter for unassigned orders only (courier_id is null OR status_id = 1)

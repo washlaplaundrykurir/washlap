@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { createSupabaseAdmin } from "@/utils/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
+import { wibDayStartUtc, wibDayEndExclusiveUtc } from "@/lib/datetime";
 
 export async function GET(request: NextRequest) {
   const { error: authError } = await requireAdmin();
@@ -56,15 +57,13 @@ export async function GET(request: NextRequest) {
                 )
             `);
 
-    // Date Filter
+    // Date Filter (WIB calendar day -> UTC instants for the timestamptz column)
     if (startDate && endDate) {
-      // Adjust endDate to end of day
-      const end = new Date(endDate);
+      const lower = wibDayStartUtc(startDate);
+      const upper = wibDayEndExclusiveUtc(endDate);
 
-      end.setHours(23, 59, 59, 999);
-      query = query
-        .gte("waktu_order", new Date(startDate).toISOString())
-        .lte("waktu_order", end.toISOString());
+      if (lower) query = query.gte("waktu_order", lower);
+      if (upper) query = query.lt("waktu_order", upper);
     }
 
     const { data: orders, error } = await query.order("waktu_order", {

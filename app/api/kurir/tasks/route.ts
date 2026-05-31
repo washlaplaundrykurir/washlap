@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/utils/supabase/server";
 import { requireKurir } from "@/lib/api-auth";
 import { calculateSLAKurir, calculateSLATiket } from "@/lib/sla-helper";
+import { wibDayStartUtc, wibDayEndExclusiveUtc } from "@/lib/datetime";
 
 // GET - Get tasks assigned to the current courier
 export async function GET(request: NextRequest) {
@@ -63,15 +64,13 @@ export async function GET(request: NextRequest) {
 
     // Filter by Date
     if (startDate) {
-      query = query.gte("waktu_order", startDate);
+      const lower = wibDayStartUtc(startDate);
+      if (lower) query = query.gte("waktu_order", lower);
     }
     if (endDate) {
-      // Add one day to include the end date fully (or handle specific time)
-      // Assuming endDate is YYYY-MM-DD, we want < endDate + 1 day
-      const nextDay = new Date(endDate);
-
-      nextDay.setDate(nextDay.getDate() + 1);
-      query = query.lt("waktu_order", nextDay.toISOString().split("T")[0]);
+      // Exclusive upper bound = start of the next WIB day.
+      const upper = wibDayEndExclusiveUtc(endDate);
+      if (upper) query = query.lt("waktu_order", upper);
     }
 
     const { data: orders, error } = await query.order("waktu_order", {

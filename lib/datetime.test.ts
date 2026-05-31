@@ -15,6 +15,8 @@ import {
   formatDateWIB,
   formatTimeWIB,
   formatTimeAgoWIB,
+  wibDayStartUtc,
+  wibDayEndExclusiveUtc,
 } from "./datetime";
 
 // A UTC instant that crosses into the next WIB day: 2026-05-31T20:09Z is
@@ -92,5 +94,59 @@ describe("formatTimeAgoWIB", () => {
   it("returns '-' for blank/invalid input", () => {
     expect(formatTimeAgoWIB(null, now)).toBe("-");
     expect(formatTimeAgoWIB("", now)).toBe("-");
+  });
+});
+
+describe("wibDayStartUtc — inclusive lower bound of a WIB date range", () => {
+  it("maps a WIB calendar day start to the correct UTC instant (UTC-7h)", () => {
+    // 2026-05-31 00:00 WIB == 2026-05-30 17:00 UTC.
+    expect(wibDayStartUtc("2026-05-31")).toBe("2026-05-30T17:00:00.000Z");
+  });
+
+  it("ignores any trailing time portion in the input", () => {
+    expect(wibDayStartUtc("2026-05-31T23:59")).toBe("2026-05-30T17:00:00.000Z");
+  });
+
+  it("returns null for blank/invalid input", () => {
+    expect(wibDayStartUtc("")).toBeNull();
+    expect(wibDayStartUtc(null)).toBeNull();
+    expect(wibDayStartUtc(undefined)).toBeNull();
+    expect(wibDayStartUtc("not-a-date")).toBeNull();
+  });
+});
+
+describe("wibDayEndExclusiveUtc — exclusive upper bound of a WIB date range", () => {
+  it("maps to the start of the NEXT WIB day in UTC", () => {
+    // Exclusive end for 2026-05-31 is 2026-06-01 00:00 WIB == 2026-05-31 17:00 UTC.
+    expect(wibDayEndExclusiveUtc("2026-05-31")).toBe("2026-05-31T17:00:00.000Z");
+  });
+
+  it("returns null for blank/invalid input", () => {
+    expect(wibDayEndExclusiveUtc("")).toBeNull();
+    expect(wibDayEndExclusiveUtc(null)).toBeNull();
+    expect(wibDayEndExclusiveUtc("garbage")).toBeNull();
+  });
+});
+
+describe("WIB range boundaries — late-night UTC edge case", () => {
+  it("includes a ticket created at 20:09 UTC (03:09 WIB next day) in that WIB day's range", () => {
+    // Ticket instant: 2026-05-31T20:09Z == 2026-06-01 03:09 WIB.
+    const ticket = new Date("2026-05-31T20:09:00.000Z").getTime();
+
+    // Filtering for the WIB day "2026-06-01":
+    const lower = new Date(wibDayStartUtc("2026-06-01") as string).getTime();
+    const upper = new Date(
+      wibDayEndExclusiveUtc("2026-06-01") as string,
+    ).getTime();
+
+    expect(ticket).toBeGreaterThanOrEqual(lower);
+    expect(ticket).toBeLessThan(upper);
+
+    // And it must NOT fall into the previous WIB day "2026-05-31".
+    const prevUpper = new Date(
+      wibDayEndExclusiveUtc("2026-05-31") as string,
+    ).getTime();
+
+    expect(ticket).toBeGreaterThanOrEqual(prevUpper);
   });
 });

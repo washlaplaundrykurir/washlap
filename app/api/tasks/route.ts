@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { createSupabaseAdmin } from "@/utils/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
+import { wibDayStartUtc, wibDayEndExclusiveUtc } from "@/lib/datetime";
 import {
   calculateSLAKurir,
   calculateSLATiket,
@@ -81,11 +82,13 @@ export async function GET(request: NextRequest) {
       query = query.or("status_id.eq.3,status_id.eq.5");
     }
 
-    if (startDate) query = query.gte(dateField, startDate);
+    if (startDate) {
+      const lower = wibDayStartUtc(startDate);
+      if (lower) query = query.gte(dateField, lower);
+    }
     if (endDate) {
-      const nextDay = new Date(endDate);
-      nextDay.setDate(nextDay.getDate() + 1);
-      query = query.lt(dateField, nextDay.toISOString().split("T")[0]);
+      const upper = wibDayEndExclusiveUtc(endDate);
+      if (upper) query = query.lt(dateField, upper);
     }
 
     if (search) {
@@ -106,11 +109,13 @@ export async function GET(request: NextRequest) {
           .not("courier_id", "is", null);
 
         if (type && ["JEMPUT", "ANTAR"].includes(type)) q = q.eq("jenis_tugas", type);
-        if (startDate) q = q.gte(dateField, startDate);
+        if (startDate) {
+          const lower = wibDayStartUtc(startDate);
+          if (lower) q = q.gte(dateField, lower);
+        }
         if (endDate) {
-          const nextDay = new Date(endDate);
-          nextDay.setDate(nextDay.getDate() + 1);
-          q = q.lt(dateField, nextDay.toISOString().split("T")[0]);
+          const upper = wibDayEndExclusiveUtc(endDate);
+          if (upper) q = q.lt(dateField, upper);
         }
         if (search) q = q.or(`nomor_tiket.ilike.%${search}%,nomor_nota.ilike.%${search}%`);
         return q;

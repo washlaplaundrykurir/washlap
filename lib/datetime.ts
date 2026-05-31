@@ -108,3 +108,56 @@ export function formatTimeAgoWIB(
 
   return `${Math.floor(diffInMinutes / 1440)}h lalu`;
 }
+
+/**
+ * Parse a WIB calendar date string ("YYYY-MM-DD", trailing time ignored) into
+ * the absolute instant of that day's start (00:00 WIB). Returns null for
+ * blank/invalid input.
+ *
+ * WIB is a fixed UTC+7 offset (no DST), so the explicit "+07:00" makes parsing
+ * deterministic regardless of the host time zone.
+ */
+function wibDayStart(dateStr: string | null | undefined): Date | null {
+  if (!dateStr) return null;
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr.trim());
+
+  if (!match) return null;
+
+  const date = new Date(`${match[1]}-${match[2]}-${match[3]}T00:00:00+07:00`);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/**
+ * UTC ISO instant for the START of a WIB calendar day (00:00 WIB).
+ * Use as the inclusive lower bound (`gte`) of a WIB date-range filter against a
+ * UTC `timestamptz` column. Returns null for blank/invalid input.
+ *
+ * Example: "2026-05-31" -> "2026-05-30T17:00:00.000Z".
+ */
+export function wibDayStartUtc(
+  dateStr: string | null | undefined,
+): string | null {
+  const date = wibDayStart(dateStr);
+
+  return date ? date.toISOString() : null;
+}
+
+/**
+ * UTC ISO instant for the START of the day AFTER a WIB calendar day, i.e. the
+ * exclusive upper bound (`lt`) of a WIB date-range filter. Returns null for
+ * blank/invalid input.
+ *
+ * Example: "2026-05-31" -> "2026-05-31T17:00:00.000Z" (= 2026-06-01 00:00 WIB).
+ */
+export function wibDayEndExclusiveUtc(
+  dateStr: string | null | undefined,
+): string | null {
+  const date = wibDayStart(dateStr);
+
+  if (!date) return null;
+
+  // WIB has no DST, so a fixed +24h advances exactly one calendar day.
+  return new Date(date.getTime() + 24 * 60 * 60 * 1000).toISOString();
+}
