@@ -240,6 +240,11 @@ export default function Home() {
           ...formData,
           nomorHP: normalizedHP,
           waktuPenjemputan: waktuPenjemputanStr,
+          // The duplicate-open-ticket confirmation is an admin-only flow
+          // (Requirement 3). The public customer form has no confirm UI, so we
+          // always confirm here — otherwise a returning customer with an open
+          // ticket would receive a 409 that surfaces as "Terjadi kesalahan".
+          confirmDuplicate: true,
         }),
       });
 
