@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Card, CardBody } from "@heroui/card";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
@@ -22,6 +22,7 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
+  Upload,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -38,6 +39,9 @@ export default function ReportsPage() {
   const [slaData, setSlaData] = useState<any[]>([]);
   const [ticketsData, setTicketsData] = useState<any[]>([]);
   const [logsData, setLogsData] = useState<any[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importSummary, setImportSummary] = useState<string>("");
 
   // Loading states
   const [isRekapLoading, setIsRekapLoading] = useState(false);
@@ -115,6 +119,46 @@ export default function ReportsPage() {
     fetchTab("logs", setLogsData, setIsLogsLoading);
   };
 
+  const handleImportFile = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.set("file", file);
+    setIsImporting(true);
+    setImportSummary("");
+
+    try {
+      const response = await fetch("/api/admin/import-nota", {
+        method: "POST",
+        body: formData,
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Gagal import data nota");
+      }
+
+      const summary = `${result.uniqueNotas || 0} nota valid: ${result.inserted || 0} baru, ${result.updated || 0} diperbarui`;
+      setImportSummary(summary);
+      showToast("success", summary);
+
+      if (currentTabHasData) {
+        handleLoadAll();
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Gagal import data nota";
+      showToast("error", message);
+    } finally {
+      setIsImporting(false);
+      event.target.value = "";
+    }
+  };
+
   const sortItems = (items: any[], sortDescriptor: SortDescriptor) => {
     return [...items].sort((a, b) => {
       let first = a[sortDescriptor.column as keyof any];
@@ -130,6 +174,29 @@ export default function ReportsPage() {
       } else if (sortDescriptor.column === "kurir") {
         first = a.auth_users?.full_name;
         second = b.auth_users?.full_name;
+      } else if (sortDescriptor.column === "nota_import_status") {
+        const rank = (notaImport: any) => {
+          if (notaImport?.matched) return 2;
+          if (notaImport?.match_reason === "phone_mismatch") return 1;
+          return 0;
+        };
+
+        first = rank(a.nota_import);
+        second = rank(b.nota_import);
+      } else if (sortDescriptor.column === "tanggal_create_nota") {
+        first = a.nota_import?.tanggal_terima
+          ? new Date(a.nota_import.tanggal_terima).getTime()
+          : 0;
+        second = b.nota_import?.tanggal_terima
+          ? new Date(b.nota_import.tanggal_terima).getTime()
+          : 0;
+      } else if (sortDescriptor.column === "tanggal_selesai_nota") {
+        first = a.nota_import?.tanggal_selesai
+          ? new Date(a.nota_import.tanggal_selesai).getTime()
+          : 0;
+        second = b.nota_import?.tanggal_selesai
+          ? new Date(b.nota_import.tanggal_selesai).getTime()
+          : 0;
       }
 
       // Percentage/Number logic
@@ -207,6 +274,8 @@ export default function ReportsPage() {
       "SLA Kurir (Durasi)": item.sla_kurir_durasi,
       "Status SLA Kurir": item.sla_kurir_status,
       "Tgl Input Nota": formatDate(item.tanggal_input_nota),
+      "Tgl Selesai Nota": formatDate(item.tanggal_selesai_nota),
+      "Validasi Nota": formatNotaImportStatus(item.nota_import),
       "SLA Nota (Durasi)": item.sla_nota_durasi,
       "Status SLA Nota": item.sla_nota_status,
       "Dibuat Oleh": item.dibuat_oleh,
@@ -226,6 +295,9 @@ export default function ReportsPage() {
       Pelanggan: item.customers?.nama_terakhir,
       Kurir: item.auth_users?.full_name || "-",
       Nota: item.nomor_nota || "-",
+      "Tgl Create Nota": formatDate(item.nota_import?.tanggal_terima),
+      "Tgl Selesai Nota": formatDate(item.nota_import?.tanggal_selesai),
+      "Validasi Nota": formatNotaImportStatus(item.nota_import),
     }));
     XLSX.utils.book_append_sheet(
       wb,
@@ -286,6 +358,36 @@ export default function ReportsPage() {
           {status}
         </Chip>
       </div>
+    );
+  };
+
+  const formatNotaImportStatus = (notaImport: any) => {
+    if (notaImport?.matched) return "Cocok";
+    if (notaImport?.match_reason === "phone_mismatch") return "HP beda";
+    if (notaImport?.match_reason === "phone_missing") return "HP kosong";
+
+    return "Belum cocok";
+  };
+
+  const renderNotaImportChip = (notaImport: any) => {
+    const matched = notaImport?.matched === true;
+    const isPhoneMismatch = notaImport?.match_reason === "phone_mismatch";
+    const isPhoneMissing = notaImport?.match_reason === "phone_missing";
+
+    return (
+      <Chip
+        color={matched ? "success" : isPhoneMismatch ? "danger" : "warning"}
+        size="sm"
+        variant="flat"
+      >
+        {matched
+          ? "Cocok"
+          : isPhoneMismatch
+            ? "HP beda"
+            : isPhoneMissing
+              ? "HP kosong"
+              : "Belum cocok"}
+      </Chip>
     );
   };
 
@@ -380,6 +482,15 @@ export default function ReportsPage() {
             <TableColumn key="nomor_nota" allowsSorting>
               NOTA
             </TableColumn>
+            <TableColumn key="nota_import_status" allowsSorting>
+              VALIDASI NOTA
+            </TableColumn>
+            <TableColumn key="tanggal_create_nota" allowsSorting>
+              TGL CREATE NOTA
+            </TableColumn>
+            <TableColumn key="tanggal_selesai_nota" allowsSorting>
+              TGL SELESAI NOTA
+            </TableColumn>
             <TableColumn key="tanggal_assign" allowsSorting>
               TGL ASSIGN
             </TableColumn>
@@ -409,6 +520,13 @@ export default function ReportsPage() {
                 <TableCell>{formatDate(item.tanggal_tiket)}</TableCell>
                 <TableCell>{formatDate(item.waktu_penjemputan)}</TableCell>
                 <TableCell>{item.nomor_nota}</TableCell>
+                <TableCell>{renderNotaImportChip(item.nota_import)}</TableCell>
+                <TableCell>
+                  {formatDate(item.nota_import?.tanggal_terima)}
+                </TableCell>
+                <TableCell>
+                  {formatDate(item.tanggal_selesai_nota)}
+                </TableCell>
                 <TableCell>{formatDate(item.tanggal_assign)}</TableCell>
                 <TableCell>
                   {formatDate(item.tanggal_diselesaikan_kurir)}
@@ -455,6 +573,15 @@ export default function ReportsPage() {
               KURIR
             </TableColumn>
             <TableColumn key="nomor_nota">NOTA</TableColumn>
+            <TableColumn key="nota_import_status" allowsSorting>
+              VALIDASI NOTA
+            </TableColumn>
+            <TableColumn key="tanggal_create_nota" allowsSorting>
+              TGL CREATE NOTA
+            </TableColumn>
+            <TableColumn key="tanggal_selesai_nota" allowsSorting>
+              TGL SELESAI NOTA
+            </TableColumn>
           </TableHeader>
           <TableBody items={sortedTickets} emptyContent="Tidak ada data.">
             {(item) => (
@@ -465,6 +592,13 @@ export default function ReportsPage() {
                 <TableCell>{item.customers?.nama_terakhir}</TableCell>
                 <TableCell>{item.auth_users?.full_name || "-"}</TableCell>
                 <TableCell>{item.nomor_nota || "-"}</TableCell>
+                <TableCell>{renderNotaImportChip(item.nota_import)}</TableCell>
+                <TableCell>
+                  {formatDate(item.nota_import?.tanggal_terima)}
+                </TableCell>
+                <TableCell>
+                  {formatDate(item.nota_import?.tanggal_selesai)}
+                </TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -554,6 +688,29 @@ export default function ReportsPage() {
         >
           Export Excel
         </Button>
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-gray-800">
+        <input
+          ref={fileInputRef}
+          accept=".xlsx"
+          className="hidden"
+          type="file"
+          onChange={handleImportFile}
+        />
+        <Button
+          color="primary"
+          isLoading={isImporting}
+          startContent={<Upload size={16} />}
+          variant="flat"
+          onPress={() => fileInputRef.current?.click()}
+        >
+          Import Data Nota
+        </Button>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {importSummary ||
+            "Upload file Rekap Data Transaksi Reguler untuk validasi nomor nota."}
+        </p>
       </div>
 
       <div className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-gray-50 dark:bg-zinc-900/50 rounded-xl border border-gray-200">

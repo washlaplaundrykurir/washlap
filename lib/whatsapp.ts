@@ -108,6 +108,10 @@ export function buildTicketWaMessage(ticket: TicketWaData): string {
     `Nomor HP: ${ticket.nomor_hp}`,
     `catatan: ${dashIfEmpty(ticket.catatan_khusus)}`,
     `Silahkan diinformasikan kembali jika ada informasi yang kurang tepat.`,
+    ``,
+    `Kami informasikan juga, untuk kedepannya kaka bisa mempercepat proses antrian antar/jemput kaka dengan menginput sendiri permintaan antar/jemput ke http://mauantarjemput.washlaplaundry.com`,
+    ``,
+    `Sesuai dengan ketentuan antar jemput kami, kami sampaikan kembali, kami akan mengusahakan semaksimal mungkin untuk antar/jemput sesuai dengan waktu yang kaka harapkan. Namun kami sampaikan mohon maaf sebelumnya jika terkadang kondisi lapangan tidak memungkinkan untuk antar/jemput sesuai waktu yang diharapkan`,
   ];
   return lines.join("\n");
 }

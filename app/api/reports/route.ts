@@ -4,6 +4,38 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/utils/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { wibDayStartUtc, wibDayEndExclusiveUtc } from "@/lib/datetime";
+import {
+  enrichWithNotaImports,
+  type ImportedNotaRecord,
+} from "@/lib/nota-import";
+
+async function fetchImportedNotas(
+  supabase: ReturnType<typeof createSupabaseAdmin>,
+  orders: Array<{ nomor_nota?: string | null }>,
+): Promise<ImportedNotaRecord[]> {
+  const nomorNotas = Array.from(
+    new Set(
+      orders
+        .map((order) => order.nomor_nota?.trim())
+        .filter((nota): nota is string => Boolean(nota)),
+    ),
+  );
+
+  if (nomorNotas.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("imported_nota_transactions")
+    .select(
+      "nomor_nota, nomor_hp, nama_pelanggan, tanggal_terima, tanggal_selesai",
+    )
+    .in("nomor_nota", nomorNotas);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data || []) as ImportedNotaRecord[];
+}
 
 export async function GET(request: NextRequest) {
   const { error: authError } = await requireAdmin();
@@ -27,6 +59,7 @@ export async function GET(request: NextRequest) {
                 waktu_assigned,
                 waktu_kurir_selesai,
                 waktu_selesai,
+                waktu_input_nota,
                 status_id,
                 catatan_khusus,
                 courier_id,
@@ -74,6 +107,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    const notaImports = await fetchImportedNotas(supabase, orders || []);
+    const enrichedOrders = enrichWithNotaImports(orders || [], notaImports);
+
     // Process data based on report type
     if (type === "rekap") {
       const rekap: Record<
@@ -88,7 +124,7 @@ export async function GET(request: NextRequest) {
         }
       > = {};
 
-      orders?.forEach((orderItem) => {
+      enrichedOrders.forEach((orderItem) => {
         const order = orderItem as any;
         const courierName =
           order.auth_users?.full_name ||
@@ -152,7 +188,7 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({ data: Object.values(rekap) });
     } else if (type === "sla") {
-      const slaData = orders?.map((order) => {
+      const slaData = enrichedOrders.map((order) => {
         // Formatting helper
         const formatDuration = (mins: number | null) => {
           if (mins === null || mins === undefined) return "-";
@@ -169,7 +205,13 @@ export async function GET(request: NextRequest) {
           nomor_nota: order.nomor_nota || "-",
           tanggal_assign: order.waktu_assigned || "-",
           tanggal_diselesaikan_kurir: order.waktu_kurir_selesai || "-",
-          tanggal_input_nota: order.waktu_selesai || "-",
+          tanggal_input_nota:
+            order.nota_import?.tanggal_terima ||
+            order.waktu_input_nota ||
+            order.waktu_selesai ||
+            "-",
+          tanggal_selesai_nota: order.nota_import?.tanggal_selesai || "-",
+          nota_import: order.nota_import,
 
           // Pre-calculated SLA Data from DB
           sla_tiket_durasi: formatDuration(order.sla_tiket_menit),
@@ -227,7 +269,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Default: Tickets (Raw Data)
-    return NextResponse.json({ data: orders });
+    return NextResponse.json({ data: enrichedOrders });
   } catch (error) {
     console.error("Report API Error:", error);
 

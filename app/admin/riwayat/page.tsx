@@ -93,13 +93,19 @@ const statusLabels: Record<number, string> = {
 
 interface StatusLog {
   id: string;
-  status_id_baru: number;
+  type?: string;
+  title?: string;
+  status_id_baru?: number;
   created_at: string;
-  auth_users: {
+  actor_name?: string | null;
+  actor_email?: string | null;
+  status_name?: string | null;
+  source?: "order" | "status_log" | "imported_nota";
+  auth_users?: {
     full_name: string;
     email: string;
   } | null;
-  status_ref: {
+  status_ref?: {
     nama_status: string;
   } | null;
 }
@@ -174,7 +180,7 @@ export default function RiwayatPage() {
       const result = await response.json();
 
       if (response.ok) {
-        setSelectedLogs(result.data);
+        setSelectedLogs(result.timeline || result.data || []);
       }
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -589,7 +595,10 @@ export default function RiwayatPage() {
                         {formatTimeOnly(log.created_at)}
                       </span>
                       <span className="font-semibold text-gray-800 dark:text-white">
-                        {log.status_ref?.nama_status || "Status Update"}
+                        {log.title ||
+                          log.status_name ||
+                          log.status_ref?.nama_status ||
+                          "Status Update"}
                         {log.status_id_baru === 2 &&
                           selectedOrderForLogs?.courierName && (
                             <span className="text-primary ml-1">
@@ -598,8 +607,8 @@ export default function RiwayatPage() {
                           )}
                       </span>
                       <span className="text-xs text-gray-500">
-                        {log.auth_users?.full_name
-                          ? `Oleh: ${log.auth_users.full_name}`
+                        {log.actor_name || log.auth_users?.full_name
+                          ? `Oleh: ${log.actor_name || log.auth_users?.full_name}`
                           : "System Update"}
                       </span>
                     </div>
