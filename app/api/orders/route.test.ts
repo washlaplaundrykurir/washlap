@@ -433,6 +433,22 @@ describe("POST /api/orders — nota warning & response shape (task 6.3)", () => 
     expect(json.warnings).toEqual([]);
   });
 
+  it("does not warn when the only matching nota row is the order just inserted", async () => {
+    h.controller.gateCustomer = null;
+    h.controller.notaRows = [
+      { id: "perm-ANTAR", nomor_nota: "INV-001", jenis_tugas: "ANTAR" },
+    ];
+
+    const { status, json } = await callPost(
+      makeBody({ permintaan: ["antar"], nomorNota: "INV-001" }),
+    );
+
+    expect(status).toBe(200);
+    expect(json.success).toBe(true);
+    expect(h.controller.calls.notaQuery).toHaveLength(1);
+    expect(json.warnings).toEqual([]);
+  });
+
   it("H) response shape: orders[] keys + normalized 62xxx nomor_hp (OQ-4)", async () => {
     h.controller.gateCustomer = null;
     h.controller.notaRows = [];

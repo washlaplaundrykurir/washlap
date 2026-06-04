@@ -368,15 +368,17 @@ export async function POST(request: NextRequest) {
           if (notaErr) {
             console.error("Nota duplicate check error:", notaErr);
           } else {
-            const hasDuplicate = (notaRows || []).some((r) =>
-              notaMatches(
-                { nota: trimmedNota, jenis: type as JenisTugas },
-                {
-                  nota: r.nomor_nota ?? "",
-                  jenis: r.jenis_tugas as JenisTugas,
-                },
-              ),
-            );
+            const hasDuplicate = (notaRows || [])
+              .filter((r) => r.id !== permintaanData.id)
+              .some((r) =>
+                notaMatches(
+                  { nota: trimmedNota, jenis: type as JenisTugas },
+                  {
+                    nota: r.nomor_nota ?? "",
+                    jenis: r.jenis_tugas as JenisTugas,
+                  },
+                ),
+              );
 
             if (hasDuplicate) {
               warnings.push({
