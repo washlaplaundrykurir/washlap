@@ -273,7 +273,7 @@ export default function CustomersPage() {
         </div>
       )}
       {/* Edit Modal */}
-      <Modal isOpen={editModal.isOpen} size="lg" onClose={editModal.onClose}>
+      <Modal isOpen={editModal.isOpen} size="lg" placement="top" scrollBehavior="inside" onClose={editModal.onClose}>
         <ModalContent className="bg-white dark:bg-gray-900">
           <ModalHeader>Edit Pelanggan</ModalHeader>
           <ModalBody>

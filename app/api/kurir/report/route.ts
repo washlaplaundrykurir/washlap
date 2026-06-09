@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
             .from("permintaan")
             .select("id, jenis_tugas, waktu_kurir_selesai, status_id")
             .eq("courier_id", userId)
-            .in("status_id", [3, 4, 5, 6]); // Completed courier tasks (Jemput=3, Antar=5, or further)
+            .in("status_id", [3, 4, 5, 6]) // Selesai jemput/antar — status 7 (Batal) tidak ikut
+            .not("waktu_kurir_selesai", "is", null);
 
         if (startDate) {
             query = query.gte("waktu_kurir_selesai", startDate);

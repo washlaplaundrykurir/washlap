@@ -494,6 +494,7 @@ function OrdersPageContent() {
         onClose={editModal.onClose}
         size="2xl"
         scrollBehavior="inside"
+        placement="top"
         backdrop="blur"
       >
         <ModalContent className="bg-white dark:bg-zinc-900 border border-divider">

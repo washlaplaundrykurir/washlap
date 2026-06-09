@@ -83,15 +83,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Calculate stats
+    // Calculate stats — status 7 (Dibatalkan) dikecualikan dari semua hitungan
     const todayStart = new Date();
 
     todayStart.setHours(0, 0, 0, 0);
 
-    const todayTasks =
-      orders?.filter((o) => new Date(o.waktu_order) >= todayStart).length || 0;
-    const pendingTasks = orders?.filter((o) => o.status_id < 6).length || 0;
-    const completedTasks = orders?.filter((o) => o.status_id >= 6).length || 0;
+    const activeOrders = orders?.filter((o) => o.status_id !== 7) || [];
+
+    const todayTasks = activeOrders.filter(
+      (o) => new Date(o.waktu_order) >= todayStart,
+    ).length;
+    const pendingTasks = activeOrders.filter((o) => o.status_id < 6).length;
+    const completedTasks = activeOrders.filter((o) => o.status_id === 6).length;
 
     // Get courier name
     const { data: userData } = await supabase
@@ -108,7 +111,7 @@ export async function GET(request: NextRequest) {
         todayTasks,
         pendingTasks,
         completedTasks,
-        totalTasks: orders?.length || 0,
+        totalTasks: activeOrders.length,
       },
     });
   } catch (error) {

@@ -410,7 +410,7 @@ export default function UsersPage() {
         </Card>
       )}
       {/* Create Modal */}
-      <Modal isOpen={createModal.isOpen} onClose={createModal.onClose}>
+      <Modal isOpen={createModal.isOpen} placement="top" scrollBehavior="inside" onClose={createModal.onClose}>
         <ModalContent className="bg-white dark:bg-gray-900">
           <ModalHeader>Tambah User Baru</ModalHeader>
           <ModalBody>
@@ -467,7 +467,7 @@ export default function UsersPage() {
       </Modal>
 
       {/* Edit Modal */}
-      <Modal isOpen={editModal.isOpen} onClose={editModal.onClose}>
+      <Modal isOpen={editModal.isOpen} placement="top" scrollBehavior="inside" onClose={editModal.onClose}>
         <ModalContent className="bg-white dark:bg-gray-900">
           <ModalHeader>Edit User</ModalHeader>
           <ModalBody>

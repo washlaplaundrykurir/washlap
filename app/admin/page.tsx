@@ -852,6 +852,7 @@ export default function AdminPage() {
       <Modal
         isOpen={orderModal.isOpen}
         scrollBehavior="inside"
+        placement="top"
         size="2xl"
         onClose={orderModal.onClose}
       >        <ModalContent className="bg-white dark:bg-gray-900 max-h-[90vh]">
