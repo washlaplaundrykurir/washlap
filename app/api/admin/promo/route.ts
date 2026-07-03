@@ -21,6 +21,7 @@ export async function GET() {
 // PUT — hanya admin
 export async function PUT(request: NextRequest) {
   const { error: authError } = await requireAdmin();
+
   if (authError) return authError;
 
   const supabase = createSupabaseAdmin();

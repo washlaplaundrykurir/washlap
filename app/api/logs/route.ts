@@ -194,6 +194,7 @@ function buildTimelineEvents(
 
 export async function GET(request: NextRequest) {
   const { error: authError } = await requireAdmin();
+
   if (authError) return authError;
 
   try {
@@ -234,6 +235,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error("Database error fetching logs:", error);
+
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 

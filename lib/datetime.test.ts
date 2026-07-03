@@ -118,7 +118,9 @@ describe("wibDayStartUtc — inclusive lower bound of a WIB date range", () => {
 describe("wibDayEndExclusiveUtc — exclusive upper bound of a WIB date range", () => {
   it("maps to the start of the NEXT WIB day in UTC", () => {
     // Exclusive end for 2026-05-31 is 2026-06-01 00:00 WIB == 2026-05-31 17:00 UTC.
-    expect(wibDayEndExclusiveUtc("2026-05-31")).toBe("2026-05-31T17:00:00.000Z");
+    expect(wibDayEndExclusiveUtc("2026-05-31")).toBe(
+      "2026-05-31T17:00:00.000Z",
+    );
   });
 
   it("returns null for blank/invalid input", () => {

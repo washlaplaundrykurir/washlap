@@ -56,6 +56,7 @@ const matchingNotaPairArb: fc.Arbitrary<{ a: string; b: string }> = fc
   .string({ maxLength: 30 })
   .chain((a) => {
     const chars = Array.from(a.trim());
+
     return fc
       .record({
         leading: whitespaceArb,
@@ -69,6 +70,7 @@ const matchingNotaPairArb: fc.Arbitrary<{ a: string; b: string }> = fc
         const recased = chars
           .map((ch, i) => (flips[i] ? ch.toUpperCase() : ch.toLowerCase()))
           .join("");
+
         return { a, b: `${leading}${recased}${trailing}` };
       });
   });
@@ -77,12 +79,11 @@ const matchingNotaPairArb: fc.Arbitrary<{ a: string; b: string }> = fc
  * A pair of fully independent nota strings — most of the time these will NOT
  * share trimmed/case-folded equality, exercising the "no match" branch.
  */
-const independentNotaPairArb: fc.Arbitrary<{ a: string; b: string }> = fc.record(
-  {
+const independentNotaPairArb: fc.Arbitrary<{ a: string; b: string }> =
+  fc.record({
     a: fc.string(),
     b: fc.string(),
-  },
-);
+  });
 
 /** Union of derived-equal and independent nota pairs for Property 7. */
 const notaPairArb: fc.Arbitrary<{ a: string; b: string }> = fc.oneof(
@@ -102,7 +103,9 @@ const nonBlankArb: fc.Arbitrary<string> = fc
     fc.string(),
     whitespaceArb,
   )
-  .map(([leading, core, rest, trailing]) => `${leading}${core}${rest}${trailing}`);
+  .map(
+    ([leading, core, rest, trailing]) => `${leading}${core}${rest}${trailing}`,
+  );
 
 // ---------------------------------------------------------------------------
 // Property 7 (task 3.2) — Validates Requirements 2.3, 2.5
@@ -112,27 +115,22 @@ describe("notaMatches (Property 7)", () => {
   // Feature: admin-ticket-wa-and-duplicate-warnings, Property 7: Nota comparator matches only on equal text (trimmed, case-insensitive) and equal Activity_Type
   it("is true iff trimmed/case-folded nota text is equal AND Activity_Type is equal", () => {
     fc.assert(
-      fc.property(
-        notaPairArb,
-        jenisArb,
-        jenisArb,
-        ({ a, b }, tA, tB) => {
-          const sameNota = a.trim().toLowerCase() === b.trim().toLowerCase();
-          const sameJenis = tA === tB;
-          const expected = sameNota && sameJenis;
+      fc.property(notaPairArb, jenisArb, jenisArb, ({ a, b }, tA, tB) => {
+        const sameNota = a.trim().toLowerCase() === b.trim().toLowerCase();
+        const sameJenis = tA === tB;
+        const expected = sameNota && sameJenis;
 
+        expect(
+          notaMatches({ nota: a, jenis: tA }, { nota: b, jenis: tB }),
+        ).toBe(expected);
+
+        // Equal nota text with different types must never match (Req 2.5).
+        if (sameNota && tA !== tB) {
           expect(
             notaMatches({ nota: a, jenis: tA }, { nota: b, jenis: tB }),
-          ).toBe(expected);
-
-          // Equal nota text with different types must never match (Req 2.5).
-          if (sameNota && tA !== tB) {
-            expect(
-              notaMatches({ nota: a, jenis: tA }, { nota: b, jenis: tB }),
-            ).toBe(false);
-          }
-        },
-      ),
+          ).toBe(false);
+        }
+      }),
       { numRuns: 100 },
     );
   });
@@ -155,6 +153,7 @@ describe("shouldCheckNota (Property 8)", () => {
     fc.assert(
       fc.property(valueArb, (value) => {
         const expected = value != null && value.trim().length > 0;
+
         expect(shouldCheckNota(value)).toBe(expected);
       }),
       { numRuns: 100 },
@@ -172,6 +171,7 @@ describe("isOpenTicket (Property 9)", () => {
     fc.assert(
       fc.property(statusIdArb, (statusId) => {
         const expected = statusId !== 6 && statusId !== 7;
+
         expect(isOpenTicket(statusId)).toBe(expected);
       }),
       { numRuns: 100 },

@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/api-auth";
 // GET - List all customers
 export async function GET() {
   const { error: authError } = await requireAdmin();
+
   if (authError) return authError;
 
   try {
@@ -32,6 +33,7 @@ export async function GET() {
 // PUT - Update customer
 export async function PUT(request: NextRequest) {
   const { error: authError } = await requireAdmin();
+
   if (authError) return authError;
 
   try {
@@ -70,6 +72,7 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete customer
 export async function DELETE(request: NextRequest) {
   const { error: authError } = await requireAdmin();
+
   if (authError) return authError;
 
   try {

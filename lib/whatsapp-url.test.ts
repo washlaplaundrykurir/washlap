@@ -16,7 +16,12 @@
 import { describe, it, expect } from "vitest";
 import fc from "fast-check";
 
-import { buildWaUrl, buildTicketWaMessage, to62, type TicketWaData } from "@/lib/whatsapp";
+import {
+  buildWaUrl,
+  buildTicketWaMessage,
+  to62,
+  type TicketWaData,
+} from "@/lib/whatsapp";
 import { isValidPhone } from "@/lib/phone";
 
 // ---------------------------------------------------------------------------
@@ -71,9 +76,25 @@ const invalidOrNoisePhone: fc.Arbitrary<string> = fc.oneof(
   fc.constant("+"),
   fc.constant("-"),
   // pure non-digit noise → normalizes to "" → invalid
-  fc.string({ unit: fc.constantFrom("+", "-", " ", "(", ")", "/", "#", "*", "a", "Z", ".") }),
+  fc.string({
+    unit: fc.constantFrom(
+      "+",
+      "-",
+      " ",
+      "(",
+      ")",
+      "/",
+      "#",
+      "*",
+      "a",
+      "Z",
+      ".",
+    ),
+  }),
   // short digit run NOT starting with 0 (≤ 6 digits) → too short → invalid
-  fc.array(digit, { minLength: 0, maxLength: 5 }).map((parts) => "9" + parts.join("")),
+  fc
+    .array(digit, { minLength: 0, maxLength: 5 })
+    .map((parts) => "9" + parts.join("")),
 );
 
 /**
@@ -95,7 +116,22 @@ const freeText: fc.Arbitrary<string> = fc.oneof(
   fc.string(),
   fc.string({ unit: "grapheme" }),
   fc.string({
-    unit: fc.constantFrom("&", "?", "#", "%", "=", "+", " ", "\n", "\t", "/", "a", "1", "é", "😀"),
+    unit: fc.constantFrom(
+      "&",
+      "?",
+      "#",
+      "%",
+      "=",
+      "+",
+      " ",
+      "\n",
+      "\t",
+      "/",
+      "a",
+      "1",
+      "é",
+      "😀",
+    ),
   }),
 );
 
@@ -138,6 +174,7 @@ describe("buildWaUrl URL properties", () => {
         expect(url).toContain(`wa.me/${target}`);
 
         const parsed = new URL(url as string);
+
         expect(parsed.host).toBe("wa.me");
         expect(parsed.pathname).toBe(`/${target}`);
 
@@ -183,6 +220,7 @@ describe("buildWaUrl URL properties", () => {
           // Valid phone → non-null, parseable wa.me URL.
           expect(url).not.toBeNull();
           const parsed = new URL(url as string);
+
           expect(parsed.host).toBe("wa.me");
           expect(parsed.pathname).toBe(`/${to62(phone)}`);
         } else {

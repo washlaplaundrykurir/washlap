@@ -29,11 +29,13 @@ const h = vi.hoisted(() => {
 
     select() {
       this._methods.add("select");
+
       return this;
     }
 
     in() {
       this._methods.add("in");
+
       return this;
     }
 
@@ -41,6 +43,7 @@ const h = vi.hoisted(() => {
       this._methods.add("upsert");
       this._payload = payload;
       controller.upsertPayload = payload;
+
       return this;
     }
 

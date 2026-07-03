@@ -95,6 +95,7 @@ export function calculateSLATiket(
   if (!penjemputan || !kurirSelesai) return null;
 
   const minutes = calculateActiveMinutes(penjemputan, kurirSelesai, 10, 21);
+
   return {
     minutes,
     status: minutes <= 120 ? "MEET" : "FAILED",
@@ -135,6 +136,7 @@ export function calculateSLAKurir(
     10,
     21,
   );
+
   return {
     minutes,
     status: minutes <= 120 ? "MEET" : "FAILED",
@@ -154,6 +156,7 @@ export function calculateSLANota(
   if (!kurirSelesai || !selesai) return null;
 
   const minutes = calculateActiveMinutes(kurirSelesai, selesai, 11, 21);
+
   return {
     minutes,
     status: minutes <= 120 ? "MEET" : "FAILED",

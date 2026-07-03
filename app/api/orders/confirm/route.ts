@@ -8,6 +8,7 @@ import { calculateSLANota } from "@/lib/sla-helper";
 // PUT - Confirm order with nota number
 export async function PUT(request: NextRequest) {
   const { user, error: authError } = await requireAdmin();
+
   if (authError) return authError;
 
   try {
@@ -40,6 +41,7 @@ export async function PUT(request: NextRequest) {
 
     if (order?.waktu_kurir_selesai) {
       const slaNota = calculateSLANota(order.waktu_kurir_selesai, waktuSelesai);
+
       if (slaNota) {
         updateData.sla_nota_menit = slaNota.minutes;
         updateData.sla_nota_status = slaNota.status;
@@ -54,6 +56,7 @@ export async function PUT(request: NextRequest) {
 
     if (updateError) {
       console.error("Confirm order error:", updateError);
+
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
@@ -77,6 +80,7 @@ export async function PUT(request: NextRequest) {
       status_id_baru: 6,
       changed_by: user!.id,
     });
+
     if (logError) {
       console.error("Failed to insert status log for confirm:", logError);
     }
@@ -87,6 +91,7 @@ export async function PUT(request: NextRequest) {
     });
   } catch (error) {
     console.error("Server error:", error);
+
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

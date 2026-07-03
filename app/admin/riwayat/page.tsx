@@ -126,6 +126,7 @@ export default function RiwayatPage() {
   useEffect(() => {
     const now = new Date();
     const firstDay = new Date(now);
+
     firstDay.setDate(now.getDate() - 7); // 8 days including today
 
     setStartDate(firstDay.toISOString().split("T")[0]);
@@ -149,6 +150,7 @@ export default function RiwayatPage() {
       setError("");
       setHasFetched(true);
       const params = new URLSearchParams();
+
       if (startDate) params.append("startDate", startDate);
       if (endDate) params.append("endDate", endDate);
       params.append("dateField", "waktu_penjemputan");
@@ -317,20 +319,20 @@ export default function RiwayatPage() {
               </span>
               <div className="flex items-center gap-2">
                 <Input
-                  type="date"
                   className="w-full"
                   size="sm"
-                  variant="bordered"
+                  type="date"
                   value={startDate}
+                  variant="bordered"
                   onChange={(e) => setStartDate(e.target.value)}
                 />
                 <span className="text-gray-400 font-bold">-</span>
                 <Input
-                  type="date"
                   className="w-full"
                   size="sm"
-                  variant="bordered"
+                  type="date"
                   value={endDate}
+                  variant="bordered"
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </div>
@@ -387,9 +389,9 @@ export default function RiwayatPage() {
 
                 <Button
                   isIconOnly
+                  className="shrink-0"
                   size="sm"
                   variant="flat"
-                  className="shrink-0"
                   onClick={() =>
                     setSortDescriptor((prev) => ({
                       ...prev,
@@ -411,10 +413,10 @@ export default function RiwayatPage() {
 
             <div className="flex items-end">
               <Button
+                className="w-full font-bold"
                 color="primary"
                 isLoading={isLoading}
                 size="md"
-                className="w-full font-bold"
                 onPress={fetchOrders}
               >
                 Tampilkan

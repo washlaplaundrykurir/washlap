@@ -34,6 +34,8 @@ export function DashboardSidebar({ role, userName }: DashboardSidebarProps) {
 
   const links = getLinks();
   const displayRole = userRole === "super-admin" ? "super admin" : userRole;
+  const isLinkActive = (href: string) =>
+    pathname === href || (href !== "/admin" && pathname.startsWith(`${href}/`));
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -61,24 +63,43 @@ export function DashboardSidebar({ role, userName }: DashboardSidebarProps) {
       {/* Links */}
       <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
         {links.map((link) => {
-          const isActive = pathname === link.href;
+          const isActive = isLinkActive(link.href);
 
           return (
-            <Link
-              key={link.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${isActive
-                ? "bg-primary/10 text-primary shadow-sm"
-                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white"
+            <div key={link.href}>
+              <Link
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
+                  isActive
+                    ? "bg-primary/10 text-primary shadow-sm"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white"
                 }`}
-              href={link.href}
-            >
-              <span className="text-lg">{link.icon}</span>
-              <span>{link.label}</span>
-            </Link>
+                href={link.href}
+              >
+                <span className="text-lg">{link.icon}</span>
+                <span>{link.label}</span>
+              </Link>
+              {link.children?.map((child) => {
+                const isChildActive = pathname === child.href;
+
+                return (
+                  <Link
+                    key={child.href}
+                    className={`ml-8 mt-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      isChildActive
+                        ? "bg-primary/10 text-primary"
+                        : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white"
+                    }`}
+                    href={child.href}
+                  >
+                    <span>{child.icon}</span>
+                    <span>{child.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
           );
         })}
       </div>
-
       {/* Footer */}
       <div className="p-4 border-t border-black/10 dark:border-white/10 space-y-4">
         <div className="flex items-center justify-between px-2">

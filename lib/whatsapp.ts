@@ -37,6 +37,7 @@ export function activityWord(jenis: "ANTAR" | "JEMPUT"): "antar" | "jemput" {
 export function dashIfEmpty(value: string | null | undefined): string {
   if (value == null) return "-";
   const trimmed = value.trim();
+
   return trimmed === "" ? "-" : trimmed;
 }
 
@@ -52,6 +53,7 @@ export function formatWaktu(iso: string | null | undefined): string {
   if (iso == null || iso.trim() === "") return "-";
 
   const date = new Date(iso);
+
   if (Number.isNaN(date.getTime())) return "-";
 
   try {
@@ -85,10 +87,12 @@ export function to62(phone: string | null | undefined): string {
  */
 export function toLocal08(phone: string | null | undefined): string {
   const normalized = normalizePhone(phone);
+
   if (!normalized) return "";
   if (normalized.startsWith("62")) {
     return "0" + normalized.slice(2);
   }
+
   return normalized;
 }
 
@@ -113,6 +117,7 @@ export function buildTicketWaMessage(ticket: TicketWaData): string {
     ``,
     `Sesuai dengan ketentuan antar jemput kami, kami sampaikan kembali, kami akan mengusahakan semaksimal mungkin untuk antar/jemput sesuai dengan waktu yang kaka harapkan. Namun kami sampaikan mohon maaf sebelumnya jika terkadang kondisi lapangan tidak memungkinkan untuk antar/jemput sesuai waktu yang diharapkan`,
   ];
+
   return lines.join("\n");
 }
 
@@ -124,6 +129,8 @@ export function buildTicketWaMessage(ticket: TicketWaData): string {
  */
 export function buildWaUrl(nomorHp: string, message: string): string | null {
   const target = to62(nomorHp);
+
   if (!isValidPhone(target)) return null;
+
   return `https://wa.me/${target}?text=${encodeURIComponent(message)}`;
 }

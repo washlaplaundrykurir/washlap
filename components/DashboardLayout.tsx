@@ -9,7 +9,11 @@ interface DashboardLayoutProps {
   userName?: string;
 }
 
-export function DashboardLayout({ children, role, userName }: DashboardLayoutProps) {
+export function DashboardLayout({
+  children,
+  role,
+  userName,
+}: DashboardLayoutProps) {
   // User requested sidebar for admin and super-admin on desktop
   const showSidebar = role === "admin" || role === "super-admin";
 
@@ -25,7 +29,11 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
 
           {/* Mobile: Top Navbar */}
           <div className="md:hidden sticky top-0 z-40">
-            <DashboardNavbar hideDesktopNav={true} role={role} userName={userName} />
+            <DashboardNavbar
+              hideDesktopNav={true}
+              role={role}
+              userName={userName}
+            />
           </div>
 
           {/* Content Area */}

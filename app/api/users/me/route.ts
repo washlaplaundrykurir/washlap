@@ -7,6 +7,7 @@ import { requireLogin } from "@/lib/api-auth";
 // GET - Get current user's info including role
 export async function GET(_request: NextRequest) {
   const { user, error: authError } = await requireLogin();
+
   if (authError) return authError;
 
   try {
@@ -24,6 +25,7 @@ export async function GET(_request: NextRequest) {
     return NextResponse.json({ success: true, user: userData });
   } catch (error) {
     console.error("Get current user error:", error);
+
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

@@ -19,7 +19,9 @@ export const WIB_TIME_ZONE = "Asia/Jakarta";
 const ID_LOCALE = "id-ID";
 
 /** Parse to a valid Date, or return null for null/blank/unparseable input. */
-function toValidDate(value: string | number | Date | null | undefined): Date | null {
+function toValidDate(
+  value: string | number | Date | null | undefined,
+): Date | null {
   if (value === null || value === undefined) return null;
   if (typeof value === "string" && value.trim() === "") return null;
 

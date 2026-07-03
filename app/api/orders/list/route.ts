@@ -7,6 +7,7 @@ import { wibDayStartUtc, wibDayEndExclusiveUtc } from "@/lib/datetime";
 
 export async function GET(request: NextRequest) {
   const { error: authError } = await requireAdmin();
+
   if (authError) return authError;
 
   try {
@@ -58,11 +59,13 @@ export async function GET(request: NextRequest) {
 
     if (startDate) {
       const lower = wibDayStartUtc(startDate);
+
       if (lower) query = query.gte(dateField, lower);
     }
     if (endDate) {
       // Exclusive upper bound = start of the next WIB day.
       const upper = wibDayEndExclusiveUtc(endDate);
+
       if (upper) query = query.lt(dateField, upper);
     }
 

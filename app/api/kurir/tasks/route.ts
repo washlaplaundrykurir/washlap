@@ -65,11 +65,13 @@ export async function GET(request: NextRequest) {
     // Filter by Date
     if (startDate) {
       const lower = wibDayStartUtc(startDate);
+
       if (lower) query = query.gte("waktu_order", lower);
     }
     if (endDate) {
       // Exclusive upper bound = start of the next WIB day.
       const upper = wibDayEndExclusiveUtc(endDate);
+
       if (upper) query = query.lt("waktu_order", upper);
     }
 

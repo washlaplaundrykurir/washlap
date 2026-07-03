@@ -31,12 +31,7 @@ export default defineConfig({
     // Only this project's own source dirs hold test files. Scoping the include
     // avoids scanning vendored/tooling folders (e.g. `.kilo/node_modules`).
     include: ["lib/**/*.{test,spec}.{ts,tsx}", "app/**/*.{test,spec}.{ts,tsx}"],
-    exclude: [
-      "**/node_modules/**",
-      "**/.next/**",
-      "**/.kilo/**",
-      "**/dist/**",
-    ],
+    exclude: ["**/node_modules/**", "**/.next/**", "**/.kilo/**", "**/dist/**"],
   },
   resolve: {
     alias: {

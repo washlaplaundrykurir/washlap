@@ -7,6 +7,13 @@ dan proyek ini mengikuti [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ---
 
+## [1.4.2] - 2026-07-03
+
+### Fixed
+- Perbaikan kueri lookup pelanggan agar menggunakan pencocokan parsial (ilike dengan pattern `%digits%`) untuk mendukung pencarian nomor HP dengan 7 digit dan mengabaikan perbedaan awalan format negara/lokal (08 vs 62).
+
+---
+
 ## [1.4.1] - 2026-05-26
 
 ### Changed

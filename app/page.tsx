@@ -58,8 +58,10 @@ export default function Home() {
   // Normalisasi nomor HP sebelum submit
   const normalizePhone = (phone: string): string => {
     const digitsOnly = phone.replace(/[^0-9]/g, "");
+
     if (!digitsOnly) return "";
     if (digitsOnly.startsWith("0")) return "62" + digitsOnly.slice(1);
+
     return digitsOnly;
   };
 
@@ -175,7 +177,9 @@ export default function Home() {
     } else {
       date.setHours(8 + Math.floor(Math.random() * 9));
     }
-    date.setMinutes(Math.floor(Math.random() * 4) * 15 - date.getTimezoneOffset());
+    date.setMinutes(
+      Math.floor(Math.random() * 4) * 15 - date.getTimezoneOffset(),
+    );
     const timeDto = date.toISOString().slice(0, 16);
 
     setFormData({
@@ -220,16 +224,24 @@ export default function Home() {
       const normalizedHP = normalizePhone(formData.nomorHP?.trim() || "");
 
       // Validasi panjang nomor HP setelah normalisasi
-      if (!normalizedHP || normalizedHP.length < 7 || normalizedHP.length > 15) {
+      if (
+        !normalizedHP ||
+        normalizedHP.length < 7 ||
+        normalizedHP.length > 15
+      ) {
         setSubmitStatus({
           type: "error",
-          message: "Nomor HP tidak valid. Pastikan format: 08xxx atau 628xxx (7-15 digit).",
+          message:
+            "Nomor HP tidak valid. Pastikan format: 08xxx atau 628xxx (7-15 digit).",
         });
         setIsLoading(false);
+
         return;
       }
 
-      const waktuPenjemputanStr = formData.waktuPenjemputan ? formData.waktuPenjemputan : null;
+      const waktuPenjemputanStr = formData.waktuPenjemputan
+        ? formData.waktuPenjemputan
+        : null;
 
       const response = await fetch("/api/orders", {
         method: "POST",
@@ -474,14 +486,16 @@ export default function Home() {
                 <Checkbox
                   classNames={{
                     label: "text-gray-700 dark:text-white/80",
-                    wrapper: "before:border-gray-400 dark:before:border-white/50",
+                    wrapper:
+                      "before:border-gray-400 dark:before:border-white/50",
                   }}
                   value="antar"
                 >
                   Antar
                 </Checkbox>
                 <p className="text-xs text-gray-500 dark:text-white/50 ml-7">
-                  Permintaan antar dapat disampaikan setelah anda mendapatkan pemberitahuan penyelesaian transaksi dari admin.
+                  Permintaan antar dapat disampaikan setelah anda mendapatkan
+                  pemberitahuan penyelesaian transaksi dari admin.
                 </p>
               </div>
               <Checkbox
@@ -683,10 +697,11 @@ export default function Home() {
             {/* Status Message */}
             {submitStatus.type && (
               <div
-                className={`p-4 rounded-lg text-center ${submitStatus.type === "success"
-                  ? "bg-green-500/20 text-green-600 dark:text-green-400 border border-green-500/30"
-                  : "bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30"
-                  }`}
+                className={`p-4 rounded-lg text-center ${
+                  submitStatus.type === "success"
+                    ? "bg-green-500/20 text-green-600 dark:text-green-400 border border-green-500/30"
+                    : "bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30"
+                }`}
               >
                 {submitStatus.message}
               </div>
@@ -772,32 +787,42 @@ export default function Home() {
                   onPress={() => {
                     // WhatsApp Logic
                     const waktuJemputStr = formData.waktuPenjemputan
-                      ? new Date(formData.waktuPenjemputan).toLocaleString("id-ID", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
+                      ? new Date(formData.waktuPenjemputan).toLocaleString(
+                          "id-ID",
+                          {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          },
+                        )
                       : "-";
 
                     const getProdukLayanan = () => {
-                      if (formData.produkLayanan === "cuci-setrika") return "Cuci Setrika";
-                      if (formData.produkLayanan === "cuci-lipat") return "Cuci Lipat";
-                      if (formData.produkLayanan === "lainnya") return formData.produkLayananManual || "Lainnya";
+                      if (formData.produkLayanan === "cuci-setrika")
+                        return "Cuci Setrika";
+                      if (formData.produkLayanan === "cuci-lipat")
+                        return "Cuci Lipat";
+                      if (formData.produkLayanan === "lainnya")
+                        return formData.produkLayananManual || "Lainnya";
+
                       return "-";
                     };
 
                     const getJenisLayanan = () => {
                       if (formData.jenisLayanan === "reguler") return "Reguler";
                       if (formData.jenisLayanan === "express") return "Express";
+
                       return "-";
                     };
 
                     const getParfum = () => {
                       if (formData.parfum === "soft") return "Soft";
                       if (formData.parfum === "strong") return "Strong";
-                      if (formData.parfum === "tanpa-parfum") return "Tanpa Parfum";
+                      if (formData.parfum === "tanpa-parfum")
+                        return "Tanpa Parfum";
+
                       return "-";
                     };
 
@@ -810,7 +835,7 @@ export default function Home() {
                       `Produk layanan: ${getProdukLayanan()}`,
                       `Jenis layanan: ${getJenisLayanan()}`,
                       `Parfum: ${getParfum()}`,
-                      `Catatan: ${formData.catatan || "-"}`
+                      `Catatan: ${formData.catatan || "-"}`,
                     ].join("\n");
 
                     const encodedMessage = encodeURIComponent(message);

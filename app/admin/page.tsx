@@ -114,8 +114,10 @@ export default function AdminPage() {
 
   const normalizePhone = (phone: string): string => {
     const digitsOnly = phone.replace(/[^0-9]/g, "");
+
     if (!digitsOnly) return "";
     if (digitsOnly.startsWith("0")) return "62" + digitsOnly.slice(1);
+
     return digitsOnly;
   };
 
@@ -207,10 +209,13 @@ export default function AdminPage() {
   const fetchUser = async () => {
     try {
       const cachedUser = localStorage.getItem("washlap_user_data");
+
       if (cachedUser) {
         const { user, timestamp } = JSON.parse(cachedUser);
+
         if (Date.now() - timestamp < 3600000 && user?.full_name) {
           setUserName(user.full_name);
+
           return;
         }
       }
@@ -736,8 +741,8 @@ export default function AdminPage() {
       <Modal
         backdrop="blur"
         isOpen={autofillModal.isOpen}
-        onOpenChange={autofillModal.onOpenChange}
         size="sm"
+        onOpenChange={autofillModal.onOpenChange}
       >
         <ModalContent className="bg-white dark:bg-gray-900 border border-black/10 dark:border-white/20">
           {(onClose) => (
@@ -753,23 +758,33 @@ export default function AdminPage() {
                   {foundCustomer?.nama && (
                     <div>
                       <span className="text-gray-400 text-xs">Nama</span>
-                      <p className="font-medium text-gray-800 dark:text-white">{foundCustomer.nama}</p>
+                      <p className="font-medium text-gray-800 dark:text-white">
+                        {foundCustomer.nama}
+                      </p>
                     </div>
                   )}
                   <div>
                     <span className="text-gray-400 text-xs">Alamat</span>
                     {foundCustomer?.alamat ? (
-                      <p className="font-medium text-gray-800 dark:text-white line-clamp-2">{foundCustomer.alamat}</p>
+                      <p className="font-medium text-gray-800 dark:text-white line-clamp-2">
+                        {foundCustomer.alamat}
+                      </p>
                     ) : (
-                      <p className="font-medium text-gray-400 dark:text-gray-500 italic">Belum pernah dimasukkan</p>
+                      <p className="font-medium text-gray-400 dark:text-gray-500 italic">
+                        Belum pernah dimasukkan
+                      </p>
                     )}
                   </div>
                   <div>
                     <span className="text-gray-400 text-xs">Google Maps</span>
                     {foundCustomer?.googleMapsLink ? (
-                      <p className="font-medium text-blue-500 truncate">{foundCustomer.googleMapsLink}</p>
+                      <p className="font-medium text-blue-500 truncate">
+                        {foundCustomer.googleMapsLink}
+                      </p>
                     ) : (
-                      <p className="font-medium text-gray-400 dark:text-gray-500 italic">Belum pernah dimasukkan</p>
+                      <p className="font-medium text-gray-400 dark:text-gray-500 italic">
+                        Belum pernah dimasukkan
+                      </p>
                     )}
                   </div>
                 </div>
@@ -779,8 +794,8 @@ export default function AdminPage() {
               </ModalBody>
               <ModalFooter className="gap-2">
                 <Button
-                  variant="light"
                   size="sm"
+                  variant="light"
                   onPress={() => {
                     onClose();
                     setFoundCustomer(null);
@@ -788,11 +803,7 @@ export default function AdminPage() {
                 >
                   Tidak, isi manual
                 </Button>
-                <Button
-                  color="primary"
-                  size="sm"
-                  onPress={handleApplyAutofill}
-                >
+                <Button color="primary" size="sm" onPress={handleApplyAutofill}>
                   Ya, gunakan data ini
                 </Button>
               </ModalFooter>
@@ -851,11 +862,13 @@ export default function AdminPage() {
       {/* Add Order Modal */}
       <Modal
         isOpen={orderModal.isOpen}
-        scrollBehavior="inside"
         placement="top"
+        scrollBehavior="inside"
         size="2xl"
         onClose={orderModal.onClose}
-      >        <ModalContent className="bg-white dark:bg-gray-900 max-h-[90vh]">
+      >
+        {" "}
+        <ModalContent className="bg-white dark:bg-gray-900 max-h-[90vh]">
           <ModalHeader>
             {savedOrders !== null ? "Pesanan Tersimpan" : "Tambah Pesanan Baru"}
           </ModalHeader>
@@ -922,83 +935,83 @@ export default function AdminPage() {
                 )}
               </div>
             ) : (
-            <div className="flex flex-col gap-4">
-              {submitStatus.type && (
-                <div
-                  className={`p-3 rounded-lg text-sm ${submitStatus.type === "success" ? "bg-green-500/20 text-green-600" : "bg-red-500/20 text-red-600"}`}
-                >
-                  {submitStatus.message}
-                </div>
-              )}
-
-              <Input
-                isRequired
-                label="Nomor HP"
-                description="Isi nomor HP lalu tekan tombol cari untuk mengambil data pelanggan tersimpan."
-                placeholder="Contoh: 08123456789"
-                value={formData.nomorHP}
-                onValueChange={handlePhoneChange}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleLookupCustomer();
-                  }
-                }}
-                endContent={
-                  <Button
-                    isIconOnly
-                    aria-label="Cari data pelanggan"
-                    color="primary"
-                    isLoading={isLookingUp}
-                    size="sm"
-                    variant="flat"
-                    onPress={handleLookupCustomer}
+              <div className="flex flex-col gap-4">
+                {submitStatus.type && (
+                  <div
+                    className={`p-3 rounded-lg text-sm ${submitStatus.type === "success" ? "bg-green-500/20 text-green-600" : "bg-red-500/20 text-red-600"}`}
                   >
-                    <Search size={16} />
-                  </Button>
-                }
-              />
-              <Input
-                isRequired
-                label="Nama Pelanggan"
-                value={formData.nama}
-                onValueChange={(v) => handleInputChange("nama", v)}
-              />
-              <Textarea
-                isRequired
-                label="Alamat Lengkap"
-                value={formData.alamat}
-                onValueChange={(v) => handleInputChange("alamat", v)}
-              />
-              <Input
-                label="Link Google Maps"
-                value={formData.googleMapsLink}
-                onValueChange={(v) => handleInputChange("googleMapsLink", v)}
-              />
+                    {submitStatus.message}
+                  </div>
+                )}
 
-              <Divider />
+                <Input
+                  isRequired
+                  description="Isi nomor HP lalu tekan tombol cari untuk mengambil data pelanggan tersimpan."
+                  endContent={
+                    <Button
+                      isIconOnly
+                      aria-label="Cari data pelanggan"
+                      color="primary"
+                      isLoading={isLookingUp}
+                      size="sm"
+                      variant="flat"
+                      onPress={handleLookupCustomer}
+                    >
+                      <Search size={16} />
+                    </Button>
+                  }
+                  label="Nomor HP"
+                  placeholder="Contoh: 08123456789"
+                  value={formData.nomorHP}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleLookupCustomer();
+                    }
+                  }}
+                  onValueChange={handlePhoneChange}
+                />
+                <Input
+                  isRequired
+                  label="Nama Pelanggan"
+                  value={formData.nama}
+                  onValueChange={(v) => handleInputChange("nama", v)}
+                />
+                <Textarea
+                  isRequired
+                  label="Alamat Lengkap"
+                  value={formData.alamat}
+                  onValueChange={(v) => handleInputChange("alamat", v)}
+                />
+                <Input
+                  label="Link Google Maps"
+                  value={formData.googleMapsLink}
+                  onValueChange={(v) => handleInputChange("googleMapsLink", v)}
+                />
 
-              <CheckboxGroup
-                label="Permintaan"
-                value={formData.permintaan}
-                onValueChange={(v) => handleInputChange("permintaan", v)}
-              >
-                <Checkbox value="jemput">Jemput</Checkbox>
-                <Checkbox value="antar">Antar</Checkbox>
-              </CheckboxGroup>
+                <Divider />
 
-              <Input
-                label="Waktu Penjemputan"
-                type="datetime-local"
-                value={formData.waktuPenjemputan || ""}
-                onChange={(e) =>
-                  handleInputChange("waktuPenjemputan", e.target.value)
-                }
-              />
+                <CheckboxGroup
+                  label="Permintaan"
+                  value={formData.permintaan}
+                  onValueChange={(v) => handleInputChange("permintaan", v)}
+                >
+                  <Checkbox value="jemput">Jemput</Checkbox>
+                  <Checkbox value="antar">Antar</Checkbox>
+                </CheckboxGroup>
 
-              <Divider />
+                <Input
+                  label="Waktu Penjemputan"
+                  type="datetime-local"
+                  value={formData.waktuPenjemputan || ""}
+                  onChange={(e) =>
+                    handleInputChange("waktuPenjemputan", e.target.value)
+                  }
+                />
 
-              {/* Hidden fields as per admin request
+                <Divider />
+
+                {/* Hidden fields as per admin request
               <RadioGroup
                 isRequired
                 label="Produk Layanan"
@@ -1043,20 +1056,20 @@ export default function AdminPage() {
               </RadioGroup>
               */}
 
-              <Textarea
-                label="Catatan Tambahan"
-                placeholder="Tambahkan catatan khusus jika ada"
-                value={formData.catatan}
-                onValueChange={(v) => handleInputChange("catatan", v)}
-              />
+                <Textarea
+                  label="Catatan Tambahan"
+                  placeholder="Tambahkan catatan khusus jika ada"
+                  value={formData.catatan}
+                  onValueChange={(v) => handleInputChange("catatan", v)}
+                />
 
-              <Input
-                label="Nomor Nota"
-                placeholder="Contoh: INV-001"
-                value={formData.nomorNota}
-                onValueChange={(v) => handleInputChange("nomorNota", v)}
-              />
-            </div>
+                <Input
+                  label="Nomor Nota"
+                  placeholder="Contoh: INV-001"
+                  value={formData.nomorNota}
+                  onValueChange={(v) => handleInputChange("nomorNota", v)}
+                />
+              </div>
             )}
           </ModalBody>
           <ModalFooter>

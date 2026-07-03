@@ -39,6 +39,7 @@ async function fetchImportedNotas(
 
 export async function GET(request: NextRequest) {
   const { error: authError } = await requireAdmin();
+
   if (authError) return authError;
 
   try {
@@ -174,6 +175,7 @@ export async function GET(request: NextRequest) {
           const slaTotal =
             (rekap[courierName] as any)._meet +
             (rekap[courierName] as any)._failed;
+
           if (slaTotal > 0) {
             rekap[courierName].meet_pct =
               Math.round(((rekap[courierName] as any)._meet / slaTotal) * 100) +

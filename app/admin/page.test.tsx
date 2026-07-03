@@ -21,7 +21,13 @@ import {
   vi,
   beforeAll,
 } from "vitest";
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  cleanup,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 
@@ -125,8 +131,7 @@ beforeEach(() => {
     me: () => jsonResponse({ user: { full_name: "Tester" } }),
     lookup: () => jsonResponse({ data: null }),
     checkDuplicate: () => jsonResponse({ exists: false }),
-    postOrders: () =>
-      jsonResponse({ success: true, orders: [], warnings: [] }),
+    postOrders: () => jsonResponse({ success: true, orders: [], warnings: [] }),
   };
 
   fetchMock.mockImplementation((input: unknown, init?: { method?: string }) => {
@@ -141,12 +146,15 @@ beforeEach(() => {
     if (url.includes("/api/customers/lookup")) return handlers.lookup();
     if (url.includes("/api/orders/check-duplicate")) {
       events.push("check-duplicate");
+
       return handlers.checkDuplicate(url);
     }
     if (url.includes("/api/orders") && method === "POST") {
       events.push("POST");
+
       return handlers.postOrders();
     }
+
     return jsonResponse({});
   });
 
@@ -174,6 +182,7 @@ function postOrderCalls(): unknown[] {
   return fetchMock.mock.calls.filter((c) => {
     const url = typeof c[0] === "string" ? c[0] : String(c[0]);
     const method = (c[1]?.method ?? "GET").toUpperCase();
+
     return (
       url.includes("/api/orders") &&
       !url.includes("/api/orders/check-duplicate") &&
@@ -186,6 +195,7 @@ function postOrderCalls(): unknown[] {
 function checkDuplicateCalls(): unknown[] {
   return fetchMock.mock.calls.filter((c) => {
     const url = typeof c[0] === "string" ? c[0] : String(c[0]);
+
     return url.includes("/api/orders/check-duplicate");
   });
 }
@@ -203,6 +213,7 @@ async function openCreateModal() {
   const addButtons = screen.getAllByRole("button", {
     name: /tambah pesanan/i,
   });
+
   await user.click(addButtons[0]);
   // Wait for the form to render inside the modal.
   await screen.findByLabelText(/nomor hp/i);
@@ -213,6 +224,7 @@ function setField(matcher: RegExp, value: string) {
   const el = screen.getByLabelText(matcher) as
     | HTMLInputElement
     | HTMLTextAreaElement;
+
   fireEvent.change(el, { target: { value } });
 }
 
@@ -235,12 +247,14 @@ async function fillForm({
 
   for (const t of types) {
     const cb = screen.getByRole("checkbox", { name: t });
+
     await user.click(cb);
   }
 }
 
 async function clickSave() {
   const saveBtn = screen.getByRole("button", { name: /simpan pesanan/i });
+
   await user.click(saveBtn);
 }
 
@@ -283,17 +297,20 @@ describe("AdminPage success state + submit flow", () => {
     const waButtons = await screen.findAllByRole("button", {
       name: /kirim wa/i,
     });
+
     expect(waButtons).toHaveLength(2);
 
     const antarBtn = screen.getByRole("button", {
       name: /kirim wa \(antar\)/i,
     });
+
     await user.click(antarBtn);
 
     const expectedUrl = buildWaUrl(
       validAntar.nomor_hp,
       buildTicketWaMessage(validAntar),
     );
+
     expect(expectedUrl).not.toBeNull();
     expect(openSpy).toHaveBeenCalledTimes(1);
     expect(openSpy).toHaveBeenCalledWith(expectedUrl, "_blank");
@@ -340,6 +357,7 @@ describe("AdminPage success state + submit flow", () => {
     // Reset history, then close.
     fetchMock.mockClear();
     const tutup = screen.getByRole("button", { name: /tutup/i });
+
     await user.click(tutup);
 
     await waitFor(() =>
@@ -371,6 +389,7 @@ describe("AdminPage success state + submit flow", () => {
 
     // Blocking confirm appears; decline it.
     const tidak = await screen.findByRole("button", { name: /^tidak$/i });
+
     await user.click(tidak);
 
     await waitFor(() =>
@@ -419,6 +438,7 @@ describe("AdminPage success state + submit flow", () => {
 
     // Confirm modal appears. At this point the POST must NOT have been issued.
     const ya = await screen.findByRole("button", { name: /^ya$/i });
+
     expect(events).toContain("check-duplicate");
     expect(events).not.toContain("POST");
 

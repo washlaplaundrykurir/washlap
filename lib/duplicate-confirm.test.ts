@@ -46,16 +46,13 @@ const subscriberArb: fc.Arbitrary<string> = fc
 const indoPhoneArb: fc.Arbitrary<string> = fc
   .tuple(
     subscriberArb,
-    fc.constantFrom<"local" | "intl" | "intlPlus">(
-      "local",
-      "intl",
-      "intlPlus",
-    ),
+    fc.constantFrom<"local" | "intl" | "intlPlus">("local", "intl", "intlPlus"),
     fc.constantFrom("", "-", " "),
   )
   .map(([sub, form, sep]) => {
     const core =
       form === "local" ? "0" + sub : form === "intl" ? "62" + sub : "+62" + sub;
+
     // Insert the separator between groups of 4 digits to mimic real-world noise.
     return sep === "" ? core : core.replace(/(\d{4})(?=\d)/g, `$1${sep}`);
   });
@@ -153,8 +150,10 @@ describe("mostRecent", () => {
         // Independently compute the element with the maximum parsed time.
         let expected = list[0];
         let bestTime = new Date(list[0].waktu_order).getTime();
+
         for (const row of list) {
           const t = new Date(row.waktu_order).getTime();
+
           if (t > bestTime) {
             bestTime = t;
             expected = row;

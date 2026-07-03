@@ -49,8 +49,10 @@ export async function POST(request: NextRequest) {
     // - Jika diawali 0 → ganti dengan 62
     const normalizePhone = (p: string): string => {
       const digitsOnly = (p || "").replace(/[^0-9]/g, "");
+
       if (!digitsOnly) return "";
       if (digitsOnly.startsWith("0")) return "62" + digitsOnly.slice(1);
+
       return digitsOnly;
     };
     const cleanNomorHP = normalizePhone(nomorHP?.trim() || "");
@@ -64,14 +66,20 @@ export async function POST(request: NextRequest) {
 
     if (cleanNomorHP.length < 7) {
       return NextResponse.json(
-        { error: "Nomor HP tidak valid (terlalu pendek). Pastikan format: 08xxx atau 628xxx." },
+        {
+          error:
+            "Nomor HP tidak valid (terlalu pendek). Pastikan format: 08xxx atau 628xxx.",
+        },
         { status: 400 },
       );
     }
 
     if (cleanNomorHP.length > 15) {
       return NextResponse.json(
-        { error: "Nomor HP tidak valid (terlalu panjang). Pastikan format: 08xxx atau 628xxx." },
+        {
+          error:
+            "Nomor HP tidak valid (terlalu panjang). Pastikan format: 08xxx atau 628xxx.",
+        },
         { status: 400 },
       );
     }
@@ -93,6 +101,7 @@ export async function POST(request: NextRequest) {
       ) {
         return true;
       }
+
       return false;
     };
 
@@ -164,8 +173,12 @@ export async function POST(request: NextRequest) {
 
     // 1. Upsert customer (based on nomor_hp)
     // Jika alamat kosong atau hanya "-", ambil dari data customer sebelumnya
-    const isAlamatKosong = !alamat || alamat.trim() === "" || alamat.trim() === "-";
-    const isGmapsKosong = !googleMapsLink || googleMapsLink.trim() === "" || googleMapsLink.trim() === "-";
+    const isAlamatKosong =
+      !alamat || alamat.trim() === "" || alamat.trim() === "-";
+    const isGmapsKosong =
+      !googleMapsLink ||
+      googleMapsLink.trim() === "" ||
+      googleMapsLink.trim() === "-";
 
     let finalAlamat = alamat;
     let finalGoogleMapsLink = googleMapsLink;
@@ -246,8 +259,7 @@ export async function POST(request: NextRequest) {
       : null;
     const alamatJalan = finalAlamat || alamat;
     // Persist the trimmed nomor_nota (OQ-6); store null when empty/whitespace.
-    const trimmedNota =
-      typeof nomorNota === "string" ? nomorNota.trim() : "";
+    const trimmedNota = typeof nomorNota === "string" ? nomorNota.trim() : "";
 
     const insertedOrders: {
       id: string;

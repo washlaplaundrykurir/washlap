@@ -40,8 +40,10 @@ export async function GET(request: NextRequest) {
   // Normalisasi nomor HP sebelum query (sama dengan logika frontend)
   const normalizePhone = (p: string): string => {
     const digitsOnly = p.replace(/[^0-9]/g, "");
+
     if (!digitsOnly) return "";
     if (digitsOnly.startsWith("0")) return "62" + digitsOnly.slice(1);
+
     return digitsOnly;
   };
 
@@ -52,13 +54,31 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data: null }, { status: 200 });
   }
 
+  // Clean phone pattern to match both 08xxx and 62xxx formats (or partial inputs)
+  const cleanPhonePattern = (p: string): string => {
+    let digits = p.replace(/[^0-9]/g, "");
+
+    if (digits.startsWith("62")) {
+      digits = digits.slice(2);
+    } else if (digits.startsWith("0")) {
+      digits = digits.slice(1);
+    }
+
+    return `%${digits}%`;
+  };
+
+  const pattern = cleanPhonePattern(phone);
+
   const supabase = createSupabaseAdmin();
 
-  const { data, error } = await supabase
+  const { data: rows, error } = await supabase
     .from("customers")
     .select("nama_terakhir, alamat_terakhir, google_maps_terakhir")
-    .eq("nomor_hp", normalizedPhone)
-    .single();
+    .ilike("nomor_hp", pattern)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  const data = rows && rows.length > 0 ? rows[0] : null;
 
   if (error || !data) {
     return NextResponse.json(

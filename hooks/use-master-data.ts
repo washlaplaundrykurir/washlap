@@ -26,6 +26,7 @@ export function useCouriers() {
     if (couriersCache) {
       setData(couriersCache);
       setIsLoading(false);
+
       return;
     }
 
@@ -33,8 +34,10 @@ export function useCouriers() {
       // Prevent duplicate concurrent requests
       if (couriersPromise) {
         const result = await couriersPromise;
+
         setData(result);
         setIsLoading(false);
+
         return;
       }
 
@@ -42,18 +45,23 @@ export function useCouriers() {
         try {
           const response = await fetch("/api/couriers");
           const result = await response.json();
+
           if (response.ok) {
             couriersCache = result.data;
+
             return result.data;
           }
+
           return [];
         } catch (error) {
           console.error("Failed to fetch couriers:", error);
+
           return [];
         }
       })();
 
       const result = await couriersPromise;
+
       setData(result);
       setIsLoading(false);
     };
@@ -77,18 +85,22 @@ export function useStatuses() {
     if (statusesCache) {
       setData(statusesCache);
       setIsLoading(false);
+
       return;
     }
 
     // 2. Check sessionStorage for persistence across refreshes
     if (typeof window !== "undefined") {
       const stored = sessionStorage.getItem(STATUSES_STORAGE_KEY);
+
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
+
           statusesCache = parsed;
           setData(parsed);
           setIsLoading(false);
+
           return;
         } catch (e) {
           sessionStorage.removeItem(STATUSES_STORAGE_KEY);
@@ -99,8 +111,10 @@ export function useStatuses() {
     const fetchData = async () => {
       if (statusesPromise) {
         const result = await statusesPromise;
+
         setData(result);
         setIsLoading(false);
+
         return;
       }
 
@@ -108,21 +122,29 @@ export function useStatuses() {
         try {
           const response = await fetch("/api/statuses");
           const result = await response.json();
+
           if (response.ok) {
             statusesCache = result.data;
             if (typeof window !== "undefined") {
-              sessionStorage.setItem(STATUSES_STORAGE_KEY, JSON.stringify(result.data));
+              sessionStorage.setItem(
+                STATUSES_STORAGE_KEY,
+                JSON.stringify(result.data),
+              );
             }
+
             return result.data;
           }
+
           return [];
         } catch (error) {
           console.error("Failed to fetch statuses:", error);
+
           return [];
         }
       })();
 
       const result = await statusesPromise;
+
       setData(result);
       setIsLoading(false);
     };

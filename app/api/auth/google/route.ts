@@ -12,6 +12,7 @@ function isSafeRedirect(path: string): boolean {
   // Hanya izinkan path relatif (tidak boleh mulai dengan // atau http)
   if (!path.startsWith("/")) return false;
   if (path.startsWith("//")) return false;
+
   // Hanya izinkan path yang dikenal
   return ALLOWED_REDIRECT_PATHS.some((allowed) => path.startsWith(allowed));
 }

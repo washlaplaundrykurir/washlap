@@ -28,6 +28,7 @@ export function rateLimit(
   if (!entry || now > entry.resetAt) {
     // Window baru atau sudah expired
     store.set(ip, { count: 1, resetAt: now + windowMs });
+
     return { allowed: true, remaining: limit - 1, resetAt: now + windowMs };
   }
 
@@ -36,7 +37,12 @@ export function rateLimit(
   }
 
   entry.count++;
-  return { allowed: true, remaining: limit - entry.count, resetAt: entry.resetAt };
+
+  return {
+    allowed: true,
+    remaining: limit - entry.count,
+    resetAt: entry.resetAt,
+  };
 }
 
 // Cleanup entries yang sudah expired setiap 5 menit
@@ -44,6 +50,7 @@ export function rateLimit(
 if (typeof setInterval !== "undefined") {
   setInterval(() => {
     const now = Date.now();
+
     Array.from(store.entries()).forEach(([key, entry]) => {
       if (now > entry.resetAt) store.delete(key);
     });

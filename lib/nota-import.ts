@@ -18,7 +18,11 @@ export interface ImportedNotaParseResult {
 
 export interface NotaImportInfo {
   matched: boolean;
-  match_reason: "nota_phone_match" | "phone_mismatch" | "phone_missing" | "nota_not_found";
+  match_reason:
+    | "nota_phone_match"
+    | "phone_mismatch"
+    | "phone_missing"
+    | "nota_not_found";
   nomor_nota?: string;
   nomor_hp?: string;
   nama_pelanggan?: string | null;
@@ -85,9 +89,8 @@ export function parseIndonesianNotaDate(value: unknown): string | null {
 
   if (!text || text === "-") return null;
 
-  const match = /^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})(?:\s+(\d{1,2}):(\d{2}))?$/.exec(
-    text,
-  );
+  const match =
+    /^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})(?:\s+(\d{1,2}):(\d{2}))?$/.exec(text);
 
   if (!match) return null;
 
@@ -210,7 +213,9 @@ export function enrichWithNotaImports<T extends { nomor_nota?: string | null }>(
     const record = key ? importByNota.get(key) : undefined;
     const orderPhone = getOrderPhone(row);
     const importedPhone = normalizePhone(record?.nomor_hp);
-    const matched = Boolean(record && orderPhone && orderPhone === importedPhone);
+    const matched = Boolean(
+      record && orderPhone && orderPhone === importedPhone,
+    );
     const matchReason = record
       ? orderPhone
         ? matched

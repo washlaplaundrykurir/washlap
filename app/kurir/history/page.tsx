@@ -108,7 +108,9 @@ export default function KurirHistoryPage() {
             Riwayat Tugas
           </h1>
           <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-            {hasFetched ? `Total: ${orders.length} tugas selesai` : "Pilih tanggal dan klik Tampilkan"}
+            {hasFetched
+              ? `Total: ${orders.length} tugas selesai`
+              : "Pilih tanggal dan klik Tampilkan"}
           </p>
         </div>
       </div>
@@ -117,28 +119,28 @@ export default function KurirHistoryPage() {
       <div className="mb-6 backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30 rounded-xl p-4 flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-3">
           <Input
+            classNames={{ label: "text-xs font-bold" }}
             label="Dari"
             size="sm"
             type="date"
             value={startDate}
-            onValueChange={setStartDate}
             variant="bordered"
-            classNames={{ label: "text-xs font-bold" }}
+            onValueChange={setStartDate}
           />
           <Input
+            classNames={{ label: "text-xs font-bold" }}
             label="Sampai"
             size="sm"
             type="date"
             value={endDate}
-            onValueChange={setEndDate}
             variant="bordered"
-            classNames={{ label: "text-xs font-bold" }}
+            onValueChange={setEndDate}
           />
         </div>
         <div className="flex gap-2">
           <Button
-            color="primary"
             className="flex-1 font-bold"
+            color="primary"
             isLoading={isLoading}
             size="sm"
             onClick={fetchHistory}
@@ -147,11 +149,11 @@ export default function KurirHistoryPage() {
           </Button>
           <Button
             as={Link}
+            className="font-bold"
             href="/kurir"
-            variant="flat"
             size="sm"
             startContent={<ArrowLeft size={14} />}
-            className="font-bold"
+            variant="flat"
           >
             Kembali
           </Button>
@@ -180,80 +182,84 @@ export default function KurirHistoryPage() {
           <CardBody className="py-16 text-center flex flex-col items-center gap-3">
             <History className="w-12 h-12 text-gray-300 dark:text-gray-600" />
             <p className="text-gray-500 dark:text-white/50 font-medium">
-              Pilih rentang tanggal dan klik <b>Tampilkan</b> untuk memuat riwayat.
+              Pilih rentang tanggal dan klik <b>Tampilkan</b> untuk memuat
+              riwayat.
             </p>
           </CardBody>
         </Card>
-      ) : !isLoading && !error && (
-        <div className="space-y-3">
-          {orders.length === 0 ? (
-            <Card className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">
-              <CardBody className="p-8 text-center flex flex-col items-center">
-                <Inbox className="w-12 h-12 mb-4 text-gray-400" />
-                <p className="text-gray-600 dark:text-white/70">
-                  Belum ada riwayat tugas.
-                </p>
-              </CardBody>
-            </Card>
-          ) : (
-            orders.map((order) => (
-              <Card
-                key={order.id}
-                className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30"
-              >
-                <CardBody className="p-4">
-                  <div className="flex flex-col md:flex-row justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <span className="font-bold text-gray-900 dark:text-white">
-                          {order.nomor_tiket}
-                        </span>
-                        {/* Display Nomor Nota if available */}
-                        {order.nomor_nota && (
+      ) : (
+        !isLoading &&
+        !error && (
+          <div className="space-y-3">
+            {orders.length === 0 ? (
+              <Card className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30">
+                <CardBody className="p-8 text-center flex flex-col items-center">
+                  <Inbox className="w-12 h-12 mb-4 text-gray-400" />
+                  <p className="text-gray-600 dark:text-white/70">
+                    Belum ada riwayat tugas.
+                  </p>
+                </CardBody>
+              </Card>
+            ) : (
+              orders.map((order) => (
+                <Card
+                  key={order.id}
+                  className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30"
+                >
+                  <CardBody className="p-4">
+                    <div className="flex flex-col md:flex-row justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <span className="font-bold text-gray-900 dark:text-white">
+                            {order.nomor_tiket}
+                          </span>
+                          {/* Display Nomor Nota if available */}
+                          {order.nomor_nota && (
+                            <Chip
+                              className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"
+                              size="sm"
+                              variant="flat"
+                            >
+                              Nota: {order.nomor_nota}
+                            </Chip>
+                          )}
                           <Chip
-                            className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"
+                            color={
+                              order.jenis_tugas === "JEMPUT"
+                                ? "secondary"
+                                : "primary"
+                            }
                             size="sm"
                             variant="flat"
                           >
-                            Nota: {order.nomor_nota}
+                            {order.jenis_tugas}
                           </Chip>
-                        )}
-                        <Chip
-                          color={
-                            order.jenis_tugas === "JEMPUT"
-                              ? "secondary"
-                              : "primary"
-                          }
-                          size="sm"
-                          variant="flat"
-                        >
-                          {order.jenis_tugas}
-                        </Chip>
-                        <Chip
-                          color={statusColors[order.status_id] || "default"}
-                          size="sm"
-                        >
-                          {order.status_ref?.nama_status || "Unknown"}
-                        </Chip>
+                          <Chip
+                            color={statusColors[order.status_id] || "default"}
+                            size="sm"
+                          >
+                            {order.status_ref?.nama_status || "Unknown"}
+                          </Chip>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-white/70 flex items-center gap-1">
+                          <User size={14} />{" "}
+                          {order.customers?.nama_terakhir || "Unknown"} •{" "}
+                          {order.customers?.nomor_hp || "-"}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-white/50 flex items-center gap-1">
+                          <MapPin size={14} /> {order.alamat_jalan || "-"}
+                        </p>
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-white/70 flex items-center gap-1">
-                        <User size={14} />{" "}
-                        {order.customers?.nama_terakhir || "Unknown"} •{" "}
-                        {order.customers?.nomor_hp || "-"}
-                      </p>
-                      <p className="text-sm text-gray-500 dark:text-white/50 flex items-center gap-1">
-                        <MapPin size={14} /> {order.alamat_jalan || "-"}
-                      </p>
+                      <div className="text-right text-sm text-gray-400 dark:text-white/40">
+                        {formatDate(order.waktu_order)}
+                      </div>
                     </div>
-                    <div className="text-right text-sm text-gray-400 dark:text-white/40">
-                      {formatDate(order.waktu_order)}
-                    </div>
-                  </div>
-                </CardBody>
-              </Card>
-            ))
-          )}
-        </div>
+                  </CardBody>
+                </Card>
+              ))
+            )}
+          </div>
+        )
       )}
     </div>
   );

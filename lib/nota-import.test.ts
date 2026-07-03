@@ -174,7 +174,10 @@ describe("enrichWithNotaImports", () => {
   });
 
   it("marks rows without imported matches as unmatched", () => {
-    const enriched = enrichWithNotaImports([{ id: "order-2", nomor_nota: null }], []);
+    const enriched = enrichWithNotaImports(
+      [{ id: "order-2", nomor_nota: null }],
+      [],
+    );
 
     expect(enriched[0].nota_import).toEqual({
       matched: false,

@@ -78,11 +78,13 @@ export default function UsersPage() {
   const handleCreate = async () => {
     if (!formData.email?.trim() || !formData.role) {
       showToast("error", "Email dan Role wajib diisi!");
+
       return;
     }
 
     if (!formData.password?.trim() || formData.password.trim().length < 8) {
       showToast("error", "Password wajib diisi dan minimal 8 karakter!");
+
       return;
     }
 
@@ -222,7 +224,9 @@ export default function UsersPage() {
       fetchUsers();
       showToast(
         "success",
-        selectedUser.is_active ? "User berhasil dinonaktifkan" : "User berhasil diaktifkan",
+        selectedUser.is_active
+          ? "User berhasil dinonaktifkan"
+          : "User berhasil diaktifkan",
       );
     } catch (err) {
       showToast(
@@ -385,8 +389,14 @@ export default function UsersPage() {
                             className="mr-2"
                             color={user.is_active ? "warning" : "success"}
                             size="sm"
+                            startContent={
+                              user.is_active ? (
+                                <PowerOff size={14} />
+                              ) : (
+                                <Power size={14} />
+                              )
+                            }
                             variant="light"
-                            startContent={user.is_active ? <PowerOff size={14} /> : <Power size={14} />}
                             onClick={() => openToggleModal(user)}
                           >
                             {user.is_active ? "Nonaktifkan" : "Aktifkan"}
@@ -410,7 +420,12 @@ export default function UsersPage() {
         </Card>
       )}
       {/* Create Modal */}
-      <Modal isOpen={createModal.isOpen} placement="top" scrollBehavior="inside" onClose={createModal.onClose}>
+      <Modal
+        isOpen={createModal.isOpen}
+        placement="top"
+        scrollBehavior="inside"
+        onClose={createModal.onClose}
+      >
         <ModalContent className="bg-white dark:bg-gray-900">
           <ModalHeader>Tambah User Baru</ModalHeader>
           <ModalBody>
@@ -467,7 +482,12 @@ export default function UsersPage() {
       </Modal>
 
       {/* Edit Modal */}
-      <Modal isOpen={editModal.isOpen} placement="top" scrollBehavior="inside" onClose={editModal.onClose}>
+      <Modal
+        isOpen={editModal.isOpen}
+        placement="top"
+        scrollBehavior="inside"
+        onClose={editModal.onClose}
+      >
         <ModalContent className="bg-white dark:bg-gray-900">
           <ModalHeader>Edit User</ModalHeader>
           <ModalBody>
@@ -525,22 +545,29 @@ export default function UsersPage() {
       {/* Toggle Active Modal */}
       <Modal isOpen={toggleModal.isOpen} onClose={toggleModal.onClose}>
         <ModalContent className="bg-white dark:bg-gray-900">
-          <ModalHeader className={selectedUser?.is_active ? "text-warning" : "text-success"}>
+          <ModalHeader
+            className={
+              selectedUser?.is_active ? "text-warning" : "text-success"
+            }
+          >
             {selectedUser?.is_active ? "Nonaktifkan User?" : "Aktifkan User?"}
           </ModalHeader>
           <ModalBody>
             {selectedUser?.is_active ? (
               <div className="flex flex-col gap-2">
                 <p className="text-gray-600 dark:text-white/70">
-                  User <strong>{selectedUser?.email}</strong> akan dinonaktifkan.
+                  User <strong>{selectedUser?.email}</strong> akan
+                  dinonaktifkan.
                 </p>
                 <p className="text-sm text-gray-500 dark:text-white/50">
-                  User tidak akan bisa login sampai diaktifkan kembali. Semua sesi aktif akan langsung diakhiri.
+                  User tidak akan bisa login sampai diaktifkan kembali. Semua
+                  sesi aktif akan langsung diakhiri.
                 </p>
               </div>
             ) : (
               <p className="text-gray-600 dark:text-white/70">
-                User <strong>{selectedUser?.email}</strong> akan diaktifkan kembali dan bisa login.
+                User <strong>{selectedUser?.email}</strong> akan diaktifkan
+                kembali dan bisa login.
               </p>
             )}
           </ModalBody>
@@ -551,7 +578,13 @@ export default function UsersPage() {
             <Button
               color={selectedUser?.is_active ? "warning" : "success"}
               isLoading={actionLoading}
-              startContent={selectedUser?.is_active ? <PowerOff size={16} /> : <Power size={16} />}
+              startContent={
+                selectedUser?.is_active ? (
+                  <PowerOff size={16} />
+                ) : (
+                  <Power size={16} />
+                )
+              }
               onClick={handleToggleActive}
             >
               {selectedUser?.is_active ? "Ya, Nonaktifkan" : "Ya, Aktifkan"}

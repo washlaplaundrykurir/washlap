@@ -8,11 +8,13 @@ export async function GET(
   { params }: { params: Promise<{ orderId: string }> },
 ) {
   const { error: authError } = await requireAdmin();
+
   if (authError) return authError;
 
   try {
     const supabase = createSupabaseAdmin();
     const { orderId } = await params;
+
     console.log("API orders/logs hit. OrderID:", orderId);
 
     const { data, error } = await supabase

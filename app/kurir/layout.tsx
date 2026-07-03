@@ -79,7 +79,10 @@ export default async function KurirLayout({
   // I will pass the detected `role`. If it's `admin`, they get Sidebar. This is safer.
 
   return (
-    <DashboardLayout role={validRole as "kurir" | "admin" | "super-admin"} userName={userName}>
+    <DashboardLayout
+      role={validRole as "kurir" | "admin" | "super-admin"}
+      userName={userName}
+    >
       {children}
     </DashboardLayout>
   );

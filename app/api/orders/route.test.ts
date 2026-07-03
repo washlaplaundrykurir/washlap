@@ -119,6 +119,7 @@ const h = vi.hoisted(() => {
 
     _chain(name: string) {
       this._methods.add(name);
+
       return this;
     }
 
@@ -139,27 +140,33 @@ const h = vi.hoisted(() => {
     }
     ilike(...args: any[]) {
       this._captured.ilike = args;
+
       return this._chain("ilike");
     }
     insert(payload: any) {
       this._insertPayload = payload;
+
       return this._chain("insert");
     }
     upsert(payload: any) {
       this._insertPayload = payload;
+
       return this._chain("upsert");
     }
     update(payload: any) {
       this._insertPayload = payload;
+
       return this._chain("update");
     }
 
     single() {
       this._methods.add("single");
+
       return Promise.resolve(this._resolve());
     }
     maybeSingle() {
       this._methods.add("maybeSingle");
+
       return Promise.resolve(this._resolve());
     }
 
@@ -189,6 +196,7 @@ const h = vi.hoisted(() => {
         if (m.has("insert")) {
           c.calls.permintaanInsert.push(this._insertPayload);
           const jt = this._insertPayload?.jenis_tugas ?? "UNKNOWN";
+
           result = {
             data: { id: `perm-${jt}` },
             error: c.permintaanInsertError,
@@ -212,6 +220,7 @@ const h = vi.hoisted(() => {
 
       this._resolved = true;
       this._resolvedValue = result;
+
       return result;
     }
   }
@@ -274,10 +283,15 @@ function makeReq(body: any) {
 async function callPost(body: any) {
   const res = await POST(makeReq(body));
   const json = await res.json();
+
   return { status: res.status, json };
 }
 
-const openRow = (jenis: "ANTAR" | "JEMPUT", status_id = 1, waktu_order = "2025-01-01T00:00:00.000Z") => ({
+const openRow = (
+  jenis: "ANTAR" | "JEMPUT",
+  status_id = 1,
+  waktu_order = "2025-01-01T00:00:00.000Z",
+) => ({
   id: `open-${jenis}`,
   jenis_tugas: jenis,
   status_id,
@@ -461,6 +475,7 @@ describe("POST /api/orders — nota warning & response shape (task 6.3)", () => 
     expect(json.orders).toHaveLength(1);
 
     const order = json.orders[0];
+
     expect(Object.keys(order).sort()).toEqual(
       [
         "alamat_jalan",

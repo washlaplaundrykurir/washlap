@@ -73,6 +73,7 @@ vi.mock("@/utils/supabase/server", () => {
 
 // Import AFTER the mocks are declared so the route binds to the mocked modules.
 import { GET } from "./route";
+
 import { createSupabaseAdmin } from "@/utils/supabase/server";
 
 // ---------------------------------------------------------------------------
@@ -349,7 +350,10 @@ describe("GET /api/orders/check-duplicate — auth guard", () => {
   it("returns the 401 response from requireAdmin without querying", async () => {
     mocks.requireAdminResult = {
       user: null as never,
-      error: NextResponse.json({ error: "Tidak terautentikasi" }, { status: 401 }),
+      error: NextResponse.json(
+        { error: "Tidak terautentikasi" },
+        { status: 401 },
+      ),
     };
 
     const res = await GET(makeRequest("?phone=08123456789&jenis=ANTAR"));

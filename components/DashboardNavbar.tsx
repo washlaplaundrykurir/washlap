@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   LogOut,
   FileSpreadsheet,
+  Clock,
 } from "lucide-react";
 import React from "react";
 
@@ -25,7 +26,15 @@ interface DashboardNavbarProps {
   userName?: string;
 }
 
-export const adminLinks = [
+export interface DashboardLink {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+  superAdminOnly?: boolean;
+  children?: DashboardLink[];
+}
+
+export const adminLinks: DashboardLink[] = [
   { href: "/admin", label: "Dashboard", icon: <LayoutDashboard size={20} /> },
   {
     href: "/admin/orders",
@@ -50,10 +59,22 @@ export const adminLinks = [
     href: "/admin/reports",
     label: "Laporan",
     icon: <FileSpreadsheet size={20} />,
+    children: [
+      {
+        href: "/admin/reports/tickets",
+        label: "Daftar Tiket",
+        icon: <ClipboardList size={18} />,
+      },
+      {
+        href: "/admin/reports/logs",
+        label: "Log Aktivitas",
+        icon: <Clock size={18} />,
+      },
+    ],
   },
 ];
 
-export const kurirLinks = [
+export const kurirLinks: DashboardLink[] = [
   { href: "/kurir", label: "Dashboard", icon: <LayoutDashboard size={20} /> },
   {
     href: "/kurir/tasks",
@@ -96,6 +117,8 @@ export function DashboardNavbar({
 
   const links = getLinks();
   const displayRole = userRole === "super-admin" ? "super admin" : userRole;
+  const isLinkActive = (href: string) =>
+    pathname === href || (href !== "/admin" && pathname.startsWith(`${href}/`));
 
   const handleLogout = async () => {
     localStorage.removeItem("washlap_user_data");
@@ -158,7 +181,7 @@ export function DashboardNavbar({
             {!hideDesktopNav && (
               <div className="hidden md:flex items-center gap-1">
                 {links.map((link) => {
-                  const isActive = pathname === link.href;
+                  const isActive = isLinkActive(link.href);
 
                   return (
                     <Link
@@ -283,22 +306,42 @@ export function DashboardNavbar({
           {/* Menu Links */}
           <div className="py-2">
             {links.map((link) => {
-              const isActive = pathname === link.href;
+              const isActive = isLinkActive(link.href);
 
               return (
-                <Link
-                  key={link.href}
-                  className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-primary/10 text-primary border-r-4 border-primary"
-                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10"
-                  }`}
-                  href={link.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <span className="text-lg">{link.icon}</span>
-                  {link.label}
-                </Link>
+                <div key={link.href}>
+                  <Link
+                    className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${
+                      isActive
+                        ? "bg-primary/10 text-primary border-r-4 border-primary"
+                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10"
+                    }`}
+                    href={link.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <span className="text-lg">{link.icon}</span>
+                    {link.label}
+                  </Link>
+                  {link.children?.map((child) => {
+                    const isChildActive = pathname === child.href;
+
+                    return (
+                      <Link
+                        key={child.href}
+                        className={`ml-8 flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors ${
+                          isChildActive
+                            ? "text-primary"
+                            : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                        }`}
+                        href={child.href}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <span className="text-base">{child.icon}</span>
+                        {child.label}
+                      </Link>
+                    );
+                  })}
+                </div>
               );
             })}
           </div>

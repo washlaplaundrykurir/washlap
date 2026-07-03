@@ -50,6 +50,7 @@ const h = vi.hoisted(() => {
 
     _chain(name: string) {
       this._methods.add(name);
+
       return this;
     }
 
@@ -61,15 +62,18 @@ const h = vi.hoisted(() => {
     }
     update(payload: any) {
       this._payload = payload;
+
       return this._chain("update");
     }
 
     maybeSingle() {
       this._methods.add("maybeSingle");
+
       return Promise.resolve(this._resolve());
     }
     single() {
       this._methods.add("single");
+
       return Promise.resolve(this._resolve());
     }
     then(onFulfilled?: any, onRejected?: any) {
@@ -81,21 +85,27 @@ const h = vi.hoisted(() => {
 
       if (this._table === "auth_users") {
         c.calls.courierLookups += 1;
+
         return { data: c.courier, error: null };
       }
       if (this._table === "permintaan") {
         if (this._methods.has("update")) {
           c.calls.permintaanUpdate.push(this._payload);
+
           return { error: c.permintaanUpdateError };
         }
+
         // SLA-branch order lookup (not hit by assignment-only tests).
         return { data: null, error: null };
       }
+
       return { data: null, error: null };
     }
   }
 
-  const makeAdminClient = () => ({ from: (table: string) => new Builder(table) });
+  const makeAdminClient = () => ({
+    from: (table: string) => new Builder(table),
+  });
 
   return { controller, makeAdminClient };
 });
@@ -121,6 +131,7 @@ function makeReq(body: any) {
 async function callPut(body: any) {
   const res = await PUT(makeReq(body));
   const json = await res.json();
+
   return { status: res.status, json };
 }
 
@@ -203,6 +214,7 @@ describe("PUT /api/tasks — disabled-courier assignment guard", () => {
 
   it("returns 400 when order id is missing", async () => {
     const { status } = await callPut({ courier_id: "kurir-1" });
+
     expect(status).toBe(400);
     expect(h.controller.calls.courierLookups).toBe(0);
   });

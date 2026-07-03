@@ -5,7 +5,11 @@ import { createSupabaseAdmin } from "@/utils/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { normalizePhone } from "@/lib/phone";
 import { toLocal08 } from "@/lib/whatsapp";
-import { isOpenTicket, mostRecent, type JenisTugas } from "@/lib/duplicate-checks";
+import {
+  isOpenTicket,
+  mostRecent,
+  type JenisTugas,
+} from "@/lib/duplicate-checks";
 
 /**
  * GET /api/orders/check-duplicate
@@ -26,6 +30,7 @@ import { isOpenTicket, mostRecent, type JenisTugas } from "@/lib/duplicate-check
  */
 export async function GET(request: NextRequest) {
   const { error: authError } = await requireAdmin();
+
   if (authError) return authError;
 
   try {
@@ -44,6 +49,7 @@ export async function GET(request: NextRequest) {
 
     // Normalize the phone to 62xxx for comparison against customers.nomor_hp.
     const normalizedPhone = normalizePhone(phoneParam);
+
     if (!normalizedPhone) {
       // No usable phone → no ticket can match.
       return NextResponse.json({ exists: false });
@@ -89,11 +95,9 @@ export async function GET(request: NextRequest) {
     const openMatches = (rows ?? [])
       .filter((row: any) => isOpenTicket(row.status_id))
       .map((row: any) => {
-        const customer = (Array.isArray(row.customers)
-          ? row.customers[0]
-          : row.customers) as
-          | { nomor_hp: string | null; nama_terakhir: string | null }
-          | null;
+        const customer = (
+          Array.isArray(row.customers) ? row.customers[0] : row.customers
+        ) as { nomor_hp: string | null; nama_terakhir: string | null } | null;
 
         return {
           waktu_order: row.waktu_order as string,

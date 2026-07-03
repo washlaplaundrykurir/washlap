@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/api-auth";
 // GET - List all users
 export async function GET() {
   const { error: authError } = await requireAdmin();
+
   if (authError) return authError;
 
   try {
@@ -32,6 +33,7 @@ export async function GET() {
 // POST - Create new user
 export async function POST(request: NextRequest) {
   const { error: authError } = await requireAdmin();
+
   if (authError) return authError;
 
   try {
@@ -105,6 +107,7 @@ export async function POST(request: NextRequest) {
 // PUT - Update user
 export async function PUT(request: NextRequest) {
   const { error: authError } = await requireAdmin();
+
   if (authError) return authError;
 
   try {
@@ -123,6 +126,7 @@ export async function PUT(request: NextRequest) {
     const updateAttrs: any = {
       user_metadata: { role, full_name },
     };
+
     if (password && password.length > 0) {
       updateAttrs.password = password;
     }
@@ -163,6 +167,7 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete user
 export async function DELETE(request: NextRequest) {
   const { error: authError } = await requireAdmin();
+
   if (authError) return authError;
 
   try {
@@ -212,6 +217,7 @@ export async function DELETE(request: NextRequest) {
 // PATCH - Toggle aktif/nonaktif user
 export async function PATCH(request: NextRequest) {
   const { user: adminUser, error: authError } = await requireAdmin();
+
   if (authError) return authError;
 
   try {
@@ -250,7 +256,9 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: is_active ? "User berhasil diaktifkan" : "User berhasil dinonaktifkan",
+      message: is_active
+        ? "User berhasil diaktifkan"
+        : "User berhasil dinonaktifkan",
     });
   } catch (error) {
     console.error("Toggle user status error:", error);

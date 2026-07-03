@@ -21,8 +21,6 @@ import {
   User,
   MapPin,
   X,
-  Phone,
-  ExternalLink,
   Clock,
   ChevronRight,
   Info,
@@ -111,8 +109,10 @@ function OrdersPageContent() {
   const fetchUserRole = async () => {
     try {
       const res = await fetch("/api/users/me");
+
       if (res.ok) {
         const result = await res.json();
+
         setUserRole(result.user?.role || "");
       }
     } catch {
@@ -145,10 +145,12 @@ function OrdersPageContent() {
     setSelectedOrder(order);
 
     let formattedDate = "";
+
     if (order.waktu_penjemputan) {
       // Konversi UTC ke WIB (UTC+7) untuk ditampilkan di input datetime-local
       const utcMs = new Date(order.waktu_penjemputan).getTime();
       const wibMs = utcMs + 7 * 60 * 60 * 1000;
+
       formattedDate = new Date(wibMs).toISOString().substring(0, 16);
     }
 
@@ -198,6 +200,7 @@ function OrdersPageContent() {
 
     if (!editForm.statusId) {
       showToast("error", "Status pesanan wajib dipilih.");
+
       return;
     }
 
@@ -207,6 +210,7 @@ function OrdersPageContent() {
       (!editForm.nomorNota || editForm.nomorNota.trim() === "")
     ) {
       showToast("error", "Nomor Nota Fisik wajib diisi untuk penugasan ANTAR.");
+
       return;
     }
 
@@ -243,12 +247,14 @@ function OrdersPageContent() {
     }
   };
 
-  const formatDate = (dateString: string | null) => formatDateTimeWIB(dateString);
+  const formatDate = (dateString: string | null) =>
+    formatDateTimeWIB(dateString);
 
   const getTimeAgo = (dateString: string) => formatTimeAgoWIB(dateString);
 
   const sortedOrders = useMemo(() => {
     let list = [...orders];
+
     list.sort((a, b) => {
       let valA: any = "";
       let valB: any = "";
@@ -274,8 +280,10 @@ function OrdersPageContent() {
 
       if (valA < valB) return sortDirection === "asc" ? -1 : 1;
       if (valA > valB) return sortDirection === "asc" ? 1 : -1;
+
       return 0;
     });
+
     return list;
   }, [orders, sortCriteria, sortDirection]);
 
@@ -300,18 +308,18 @@ function OrdersPageContent() {
           <div className="flex items-center gap-1 w-full sm:w-auto">
             <Select
               aria-label="Kriteria Urutan"
-              placeholder="Urutkan..."
-              selectedKeys={[sortCriteria]}
-              onSelectionChange={(keys) =>
-                setSortCriteria(Array.from(keys)[0] as string)
-              }
-              size="sm"
               className="flex-1 sm:min-w-[160px]"
-              startContent={<ListFilter size={14} className="text-gray-400" />}
-              variant="flat"
               classNames={{
                 trigger: "bg-white dark:bg-zinc-800 rounded-xl font-bold h-10",
               }}
+              placeholder="Urutkan..."
+              selectedKeys={[sortCriteria]}
+              size="sm"
+              startContent={<ListFilter className="text-gray-400" size={14} />}
+              variant="flat"
+              onSelectionChange={(keys) =>
+                setSortCriteria(Array.from(keys)[0] as string)
+              }
             >
               <SelectItem key="waktu_order" textValue="Waktu Order">
                 Waktu Order
@@ -328,28 +336,28 @@ function OrdersPageContent() {
             </Select>
             <Button
               isIconOnly
-              variant="flat"
-              size="sm"
               className="bg-white dark:bg-zinc-800 h-10 w-10 min-w-10 rounded-xl"
+              size="sm"
+              variant="flat"
               onPress={() =>
                 setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))
               }
             >
               {sortDirection === "asc" ? (
-                <ArrowUpNarrowWide size={18} className="text-blue-500" />
+                <ArrowUpNarrowWide className="text-blue-500" size={18} />
               ) : (
-                <ArrowDownWideNarrow size={18} className="text-blue-500" />
+                <ArrowDownWideNarrow className="text-blue-500" size={18} />
               )}
             </Button>
           </div>
 
           <Button
-            isLoading={isLoading}
-            variant="flat"
-            size="sm"
             className="font-bold bg-white dark:bg-zinc-800 w-full sm:w-auto h-10 px-4 rounded-xl"
-            onClick={fetchOrders}
+            isLoading={isLoading}
+            size="sm"
             startContent={<Info size={16} />}
+            variant="flat"
+            onClick={fetchOrders}
           >
             Refresh
           </Button>
@@ -373,7 +381,7 @@ function OrdersPageContent() {
 
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Spinner size="md" color="primary" />
+            <Spinner color="primary" size="md" />
             <p className="text-gray-500 text-xs font-bold animate-pulse">
               Menghubungkan...
             </p>
@@ -400,12 +408,12 @@ function OrdersPageContent() {
                       {order.nomor_tiket}
                     </span>
                     <Chip
+                      className="font-black h-5 px-1.5 text-[9px] text-white"
                       color={
                         order.jenis_tugas === "JEMPUT" ? "secondary" : "primary"
                       }
                       size="sm"
                       variant="flat"
-                      className="font-black h-5 px-1.5 text-[9px] text-white"
                     >
                       {order.jenis_tugas === "JEMPUT" ? "JEM" : "ANT"}
                     </Chip>
@@ -419,7 +427,7 @@ function OrdersPageContent() {
                 <CardBody className="px-4 py-2 space-y-3">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <User size={14} className="text-blue-500" />
+                      <User className="text-blue-500" size={14} />
                       <span className="font-black text-gray-900 dark:text-white text-xs uppercase">
                         {order.customers?.nama_terakhir || "PELANGGAN"}
                       </span>
@@ -427,8 +435,8 @@ function OrdersPageContent() {
 
                     <div className="flex items-start gap-2">
                       <MapPin
-                        size={14}
                         className="text-orange-500 shrink-0 mt-0.5"
+                        size={14}
                       />
                       <p className="text-[11px] text-gray-600 dark:text-gray-300 font-semibold line-clamp-1">
                         {order.alamat_jalan || "Alamat belum diinput"}
@@ -461,24 +469,26 @@ function OrdersPageContent() {
                 <CardFooter className="px-4 py-3 bg-gray-50/50 dark:bg-white/5 border-t border-divider flex justify-between items-center gap-2">
                   <Button
                     isIconOnly
-                    color="danger"
-                    variant="flat"
                     className="h-10 w-10 min-w-10 rounded-xl"
-                    isDisabled={userRole === "super-admin" && order.status_id >= 2}
+                    color="danger"
+                    isDisabled={
+                      userRole === "super-admin" && order.status_id >= 2
+                    }
                     title={
                       userRole === "super-admin" && order.status_id >= 2
                         ? "Tiket yang sudah ditugaskan hanya dapat dibatalkan oleh admin"
                         : "Batalkan tiket"
                     }
+                    variant="flat"
                     onPress={() => handleOpenCancel(order)}
                   >
                     <Trash2 size={18} />
                   </Button>
                   <Button
-                    color="primary"
                     className="font-black h-10 flex-1 shadow-sm rounded-xl"
-                    onPress={() => handleOpenEdit(order)}
+                    color="primary"
                     endContent={<ChevronRight size={18} />}
+                    onPress={() => handleOpenEdit(order)}
                   >
                     Tugaskan Kurir
                   </Button>
@@ -490,12 +500,12 @@ function OrdersPageContent() {
       </div>
 
       <Modal
-        isOpen={editModal.isOpen}
-        onClose={editModal.onClose}
-        size="2xl"
-        scrollBehavior="inside"
-        placement="top"
         backdrop="blur"
+        isOpen={editModal.isOpen}
+        placement="top"
+        scrollBehavior="inside"
+        size="2xl"
+        onClose={editModal.onClose}
       >
         <ModalContent className="bg-white dark:bg-zinc-900 border border-divider">
           <ModalHeader className="flex flex-col gap-1 pb-4 pt-6 px-6 border-b border-divider">
@@ -518,58 +528,58 @@ function OrdersPageContent() {
                 <Input
                   isReadOnly
                   label="Nama Pelanggan"
+                  size="sm"
+                  startContent={<User className="text-gray-400" size={16} />}
                   value={selectedOrder?.customers?.nama_terakhir || "-"}
                   variant="flat"
-                  size="sm"
-                  startContent={<User size={16} className="text-gray-400" />}
                 />
                 <Input
                   isReadOnly
                   label="Nomor HP"
-                  value={selectedOrder?.customers?.nomor_hp || "-"}
-                  variant="flat"
                   size="sm"
                   startContent={
-                    <Smartphone size={16} className="text-gray-400" />
+                    <Smartphone className="text-gray-400" size={16} />
                   }
+                  value={selectedOrder?.customers?.nomor_hp || "-"}
+                  variant="flat"
                 />
                 <Input
                   isReadOnly
                   label="Produk"
-                  value={selectedOrder?.order_items?.[0]?.produk_layanan || "-"}
-                  variant="flat"
                   size="sm"
                   startContent={
-                    <ShoppingBasket size={16} className="text-gray-400" />
+                    <ShoppingBasket className="text-gray-400" size={16} />
                   }
+                  value={selectedOrder?.order_items?.[0]?.produk_layanan || "-"}
+                  variant="flat"
                 />
                 <Input
                   isReadOnly
                   label="Layanan"
+                  size="sm"
+                  startContent={<Tag className="text-gray-400" size={16} />}
                   value={selectedOrder?.order_items?.[0]?.jenis_layanan || "-"}
                   variant="flat"
-                  size="sm"
-                  startContent={<Tag size={16} className="text-gray-400" />}
                 />
                 <Input
                   isReadOnly
                   label="Parfum"
+                  size="sm"
+                  startContent={<Info className="text-gray-400" size={16} />}
                   value={selectedOrder?.order_items?.[0]?.parfum || "-"}
                   variant="flat"
-                  size="sm"
-                  startContent={<Info size={16} className="text-gray-400" />}
                 />
               </div>
               {selectedOrder?.google_maps_link && (
                 <div className="flex items-center gap-2 p-2 bg-zinc-50 dark:bg-white/5 rounded-xl border border-divider">
-                  <Map size={16} className="text-gray-400" />
+                  <Map className="text-gray-400" size={16} />
                   <span className="text-xs font-semibold text-gray-500">
                     Google Maps:
                   </span>
                   <Link
+                    className="text-xs text-blue-500 font-bold hover:underline"
                     href={selectedOrder.google_maps_link}
                     target="_blank"
-                    className="text-xs text-blue-500 font-bold hover:underline"
                   >
                     Buka Link Lokasi →
                   </Link>
@@ -583,39 +593,39 @@ function OrdersPageContent() {
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
+                  className="font-bold"
                   label="Jadwal Penjemputan"
+                  startContent={
+                    <CalendarCheck className="text-primary" size={16} />
+                  }
                   type="datetime-local"
                   value={editForm.waktuJemput}
+                  variant="bordered"
                   onChange={(e) =>
                     setEditForm({ ...editForm, waktuJemput: e.target.value })
-                  }
-                  variant="bordered"
-                  className="font-bold"
-                  startContent={
-                    <CalendarCheck size={16} className="text-primary" />
                   }
                 />
                 <div className="hidden md:block" />
               </div>
               <Textarea
+                className="font-bold"
                 label="Alamat Lengkap"
+                minRows={2}
                 value={editForm.alamat}
+                variant="bordered"
                 onChange={(e) =>
                   setEditForm({ ...editForm, alamat: e.target.value })
                 }
-                variant="bordered"
-                className="font-bold"
-                minRows={2}
               />
               <Textarea
+                className="font-bold"
                 label="Catatan Khusus / Detail Permintaan"
+                minRows={2}
                 value={editForm.catatanKhusus}
+                variant="bordered"
                 onChange={(e) =>
                   setEditForm({ ...editForm, catatanKhusus: e.target.value })
                 }
-                variant="bordered"
-                className="font-bold"
-                minRows={2}
               />
             </div>
 
@@ -625,16 +635,16 @@ function OrdersPageContent() {
               </p>
               <div className="grid grid-cols-1 gap-4">
                 <Select
+                  className="font-bold"
                   label="Status Pesanan"
                   selectedKeys={[editForm.statusId]}
+                  variant="bordered"
                   onSelectionChange={(keys) =>
                     setEditForm({
                       ...editForm,
                       statusId: Array.from(keys)[0] as string,
                     })
                   }
-                  variant="bordered"
-                  className="font-bold"
                 >
                   {statuses
                     .filter((s) => s.id === 1 || s.id === 2)
@@ -648,19 +658,19 @@ function OrdersPageContent() {
                 {editForm.statusId === "2" && (
                   <div className="space-y-4 pt-2 border-t border-divider">
                     <Select
+                      className="font-bold"
                       label="Pilih Kurir Lapangan"
                       placeholder="Pilih kurir..."
                       selectedKeys={
                         editForm.courierId ? [editForm.courierId] : []
                       }
+                      variant="bordered"
                       onSelectionChange={(keys) =>
                         setEditForm({
                           ...editForm,
                           courierId: Array.from(keys)[0] as string,
                         })
                       }
-                      variant="bordered"
-                      className="font-bold"
                     >
                       {couriers.map((c: any) => (
                         <SelectItem
@@ -674,17 +684,17 @@ function OrdersPageContent() {
 
                     {selectedOrder?.jenis_tugas === "ANTAR" && (
                       <Input
+                        className="font-bold border-l-4 border-l-primary"
                         label="Nomor Nota Fisik"
                         placeholder="Contoh: 12345"
                         value={editForm.nomorNota}
+                        variant="bordered"
                         onChange={(e) =>
                           setEditForm({
                             ...editForm,
                             nomorNota: e.target.value,
                           })
                         }
-                        variant="bordered"
-                        className="font-bold border-l-4 border-l-primary"
                       />
                     )}
                   </div>
@@ -694,18 +704,18 @@ function OrdersPageContent() {
           </ModalBody>
           <ModalFooter className="pb-6 pt-2 px-6 flex gap-2 border-t border-divider">
             <Button
-              variant="light"
               className="font-bold flex-1"
+              variant="light"
               onPress={editModal.onClose}
             >
               Batal
             </Button>
             <Button
-              color="primary"
               className="font-black flex-[2] h-12 shadow-lg shadow-blue-500/20"
+              color="primary"
               isLoading={isSaving}
-              onPress={handleSaveChanges}
               startContent={<Save size={18} />}
+              onPress={handleSaveChanges}
             >
               Simpan & Tugaskan
             </Button>
@@ -713,10 +723,10 @@ function OrdersPageContent() {
         </ModalContent>
       </Modal>
       <Modal
-        isOpen={cancelModal.isOpen}
-        onClose={cancelModal.onClose}
-        size="md"
         backdrop="blur"
+        isOpen={cancelModal.isOpen}
+        size="md"
+        onClose={cancelModal.onClose}
       >
         <ModalContent className="bg-white dark:bg-zinc-900 border border-divider">
           <ModalHeader className="flex flex-col gap-1 pb-4 pt-6 px-6">
@@ -733,18 +743,18 @@ function OrdersPageContent() {
           </ModalBody>
           <ModalFooter className="pb-6 pt-4 px-6 flex gap-2">
             <Button
-              variant="light"
               className="font-bold flex-1"
+              variant="light"
               onPress={cancelModal.onClose}
             >
               Tidak, Kembali
             </Button>
             <Button
-              color="danger"
               className="font-black flex-1 shadow-lg shadow-danger-500/20"
+              color="danger"
               isLoading={isSaving}
-              onPress={handleCancelOrder}
               startContent={<Trash2 size={18} />}
+              onPress={handleCancelOrder}
             >
               Ya, Batalkan
             </Button>
@@ -760,7 +770,7 @@ export default function OrdersPage() {
     <Suspense
       fallback={
         <div className="min-h-[40vh] flex items-center justify-center">
-          <Spinner size="lg" color="primary" />
+          <Spinner color="primary" size="lg" />
         </div>
       }
     >

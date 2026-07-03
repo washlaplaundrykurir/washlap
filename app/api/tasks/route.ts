@@ -13,6 +13,7 @@ import {
 // GET - Get orders by jenis_tugas (JEMPUT or ANTAR)
 export async function GET(request: NextRequest) {
   const { error: authError } = await requireAdmin();
+
   if (authError) return authError;
 
   try {
@@ -84,10 +85,12 @@ export async function GET(request: NextRequest) {
 
     if (startDate) {
       const lower = wibDayStartUtc(startDate);
+
       if (lower) query = query.gte(dateField, lower);
     }
     if (endDate) {
       const upper = wibDayEndExclusiveUtc(endDate);
+
       if (upper) query = query.lt(dateField, upper);
     }
 
@@ -108,16 +111,23 @@ export async function GET(request: NextRequest) {
           .or("status_id.eq.3,status_id.eq.5")
           .not("courier_id", "is", null);
 
-        if (type && ["JEMPUT", "ANTAR"].includes(type)) q = q.eq("jenis_tugas", type);
+        if (type && ["JEMPUT", "ANTAR"].includes(type))
+          q = q.eq("jenis_tugas", type);
         if (startDate) {
           const lower = wibDayStartUtc(startDate);
+
           if (lower) q = q.gte(dateField, lower);
         }
         if (endDate) {
           const upper = wibDayEndExclusiveUtc(endDate);
+
           if (upper) q = q.lt(dateField, upper);
         }
-        if (search) q = q.or(`nomor_tiket.ilike.%${search}%,nomor_nota.ilike.%${search}%`);
+        if (search)
+          q = q.or(
+            `nomor_tiket.ilike.%${search}%,nomor_nota.ilike.%${search}%`,
+          );
+
         return q;
       };
 
@@ -133,12 +143,15 @@ export async function GET(request: NextRequest) {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    const { data: orders, error, count } = await query
-      .order(dateField, { ascending: false })
-      .range(from, to);
+    const {
+      data: orders,
+      error,
+      count,
+    } = await query.order(dateField, { ascending: false }).range(from, to);
 
     if (error) {
       console.error("Fetch tasks error:", error);
+
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -153,6 +166,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Server error:", error);
+
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -160,6 +174,7 @@ export async function GET(request: NextRequest) {
 // PUT - Update order status or assign courier
 export async function PUT(request: NextRequest) {
   const { error: authError } = await requireAdmin();
+
   if (authError) return authError;
 
   try {
@@ -167,7 +182,10 @@ export async function PUT(request: NextRequest) {
     const { id, status_id, courier_id } = await request.json();
 
     if (!id) {
-      return NextResponse.json({ error: "Order ID diperlukan" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Order ID diperlukan" },
+        { status: 400 },
+      );
     }
 
     // Authoritative guard: an assignment to a courier is only allowed when that
@@ -183,7 +201,10 @@ export async function PUT(request: NextRequest) {
         .maybeSingle();
 
       if (courierError) {
-        return NextResponse.json({ error: courierError.message }, { status: 500 });
+        return NextResponse.json(
+          { error: courierError.message },
+          { status: 500 },
+        );
       }
 
       if (!courier || courier.role !== "kurir") {
@@ -221,7 +242,11 @@ export async function PUT(request: NextRequest) {
           updateData.waktu_kurir_selesai = now;
 
           const slaTiket = calculateSLATiket(order.waktu_penjemputan, now);
-          const slaKurir = calculateSLAKurir(order.waktu_assigned, order.waktu_penjemputan, now);
+          const slaKurir = calculateSLAKurir(
+            order.waktu_assigned,
+            order.waktu_penjemputan,
+            now,
+          );
 
           if (slaTiket) {
             updateData.sla_tiket_menit = slaTiket.minutes;
@@ -236,6 +261,7 @@ export async function PUT(request: NextRequest) {
 
           if (order.waktu_kurir_selesai) {
             const slaNota = calculateSLANota(order.waktu_kurir_selesai, now);
+
             if (slaNota) {
               updateData.sla_nota_menit = slaNota.minutes;
               updateData.sla_nota_status = slaNota.status;
@@ -245,15 +271,22 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    const { error } = await supabase.from("permintaan").update(updateData).eq("id", id);
+    const { error } = await supabase
+      .from("permintaan")
+      .update(updateData)
+      .eq("id", id);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, message: "Order berhasil diupdate" });
+    return NextResponse.json({
+      success: true,
+      message: "Order berhasil diupdate",
+    });
   } catch (error) {
     console.error("Update task error:", error);
+
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

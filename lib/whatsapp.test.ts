@@ -48,7 +48,9 @@ const blankOrNilArb: fc.Arbitrary<string | null | undefined> = fc.oneof(
 const nonBlankArb: fc.Arbitrary<string> = fc
   .tuple(
     blankArb,
-    fc.string({ minLength: 1, maxLength: 8 }).filter((s) => s.trim().length > 0),
+    fc
+      .string({ minLength: 1, maxLength: 8 })
+      .filter((s) => s.trim().length > 0),
     blankArb,
   )
   .map(([left, core, right]) => left + core + right);
@@ -71,9 +73,12 @@ const braceFreeText: fc.Arbitrary<string> = fc
   .map((s) => s.replace(/[{}]/g, ""));
 
 /** Nullable variant of {@link braceFreeText}. */
-const nullableBraceFree: fc.Arbitrary<string | null> = fc.option(braceFreeText, {
-  nil: null,
-});
+const nullableBraceFree: fc.Arbitrary<string | null> = fc.option(
+  braceFreeText,
+  {
+    nil: null,
+  },
+);
 
 /**
  * Indonesian phone generator: valid 08xxx and 62xxx numbers, optionally with
@@ -90,7 +95,9 @@ const indoPhoneArb: fc.Arbitrary<string> = fc
     pad: fc.constantFrom("", " "),
   })
   .map(({ prefix, sub, sep, pad }) => {
-    const grouped = sub.slice(0, 3) + sep + sub.slice(3, 6) + sep + sub.slice(6);
+    const grouped =
+      sub.slice(0, 3) + sep + sub.slice(3, 6) + sep + sub.slice(6);
+
     return pad + prefix + sep + grouped + pad;
   });
 
@@ -177,6 +184,7 @@ describe("lib/whatsapp – dashIfEmpty & formatWaktu", () => {
 
           // formatWaktu: valid ISO -> non-"-" containing date + time components.
           const formatted = formatWaktu(iso);
+
           expect(formatted).not.toBe("-");
           // Contains a 4-digit year (date component), robust to id-ID month names.
           expect(/\d{4}/.test(formatted)).toBe(true);

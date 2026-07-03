@@ -55,6 +55,7 @@ export interface DupMatch {
 export function notaMatches(a: NotaComparable, b: NotaComparable): boolean {
   const sameNota = a.nota.trim().toLowerCase() === b.nota.trim().toLowerCase();
   const sameJenis = a.jenis === b.jenis;
+
   return sameNota && sameJenis;
 }
 
@@ -67,6 +68,7 @@ export function notaMatches(a: NotaComparable, b: NotaComparable): boolean {
  */
 export function shouldCheckNota(value: string | null | undefined): boolean {
   if (value == null) return false;
+
   return value.trim() !== "";
 }
 
@@ -90,12 +92,14 @@ export function isOpenTicket(status_id: number): boolean {
 function toTime(value: WaktuOrder): number {
   if (value instanceof Date) {
     const t = value.getTime();
+
     return Number.isNaN(t) ? -Infinity : t;
   }
   if (typeof value === "number") {
     return Number.isNaN(value) ? -Infinity : value;
   }
   const t = new Date(value).getTime();
+
   return Number.isNaN(t) ? -Infinity : t;
 }
 
@@ -118,6 +122,7 @@ export function mostRecent<T extends HasWaktuOrder>(matches: T[]): T {
 
   for (let i = 1; i < matches.length; i++) {
     const time = toTime(matches[i].waktu_order);
+
     if (time > bestTime) {
       best = matches[i];
       bestTime = time;
@@ -142,5 +147,6 @@ export function buildDuplicateConfirmText(match: DupMatch): string {
   const phone = toLocal08(match.nomor_hp);
   const nama = dashIfEmpty(match.nama);
   const word = activityWord(match.jenis_tugas);
+
   return `Sudah ada tiket dengan nomor HP ${phone}, atas nama ${nama} untuk permintaan ${word}. Apakah kamu yakin untuk membuat tiket yang sama?`;
 }

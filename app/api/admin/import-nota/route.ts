@@ -12,6 +12,7 @@ const XLSX_MIME_TYPES = new Set([
 
 export async function POST(request: NextRequest) {
   const { user, error: authError } = await requireAdmin();
+
   if (authError) return authError;
 
   try {
@@ -80,10 +81,7 @@ export async function POST(request: NextRequest) {
       .select("nomor_nota");
 
     if (upsertError) {
-      return NextResponse.json(
-        { error: upsertError.message },
-        { status: 500 },
-      );
+      return NextResponse.json({ error: upsertError.message }, { status: 500 });
     }
 
     const updated = parsed.records.filter((record) =>

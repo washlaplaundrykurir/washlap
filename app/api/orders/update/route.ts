@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/api-auth";
 
 export async function PUT(request: NextRequest) {
   const { user, error: authError } = await requireAdmin();
+
   if (authError) return authError;
 
   try {
@@ -53,7 +54,10 @@ export async function PUT(request: NextRequest) {
 
       if (currentOrder.status_id >= 2 && user!.role === "super-admin") {
         return NextResponse.json(
-          { error: "Tiket yang sudah ditugaskan hanya dapat dibatalkan oleh admin" },
+          {
+            error:
+              "Tiket yang sudah ditugaskan hanya dapat dibatalkan oleh admin",
+          },
           { status: 403 },
         );
       }
@@ -72,7 +76,10 @@ export async function PUT(request: NextRequest) {
         .maybeSingle();
 
       if (courierError) {
-        return NextResponse.json({ error: courierError.message }, { status: 500 });
+        return NextResponse.json(
+          { error: courierError.message },
+          { status: 500 },
+        );
       }
 
       if (!courier || courier.role !== "kurir") {
@@ -95,8 +102,10 @@ export async function PUT(request: NextRequest) {
     // Normalisasi nomor HP (dipakai di kedua branch)
     const normalizePhone = (p: string): string => {
       const digitsOnly = (p || "").replace(/[^0-9]/g, "");
+
       if (!digitsOnly) return "";
       if (digitsOnly.startsWith("0")) return "62" + digitsOnly.slice(1);
+
       return digitsOnly;
     };
 
@@ -107,6 +116,7 @@ export async function PUT(request: NextRequest) {
       if (nama !== undefined) customerUpdate.nama_terakhir = nama;
       if (phone !== undefined && phone !== null && phone !== "") {
         const normalized = normalizePhone(phone.trim());
+
         if (normalized) customerUpdate.nomor_hp = normalized;
       }
 
@@ -196,6 +206,7 @@ export async function PUT(request: NextRequest) {
     // 3. Update Order Items
     if (produk || layanan || parfum) {
       const updates: any = {};
+
       if (produk) updates.produk_layanan = produk;
       if (layanan) updates.jenis_layanan = layanan;
       if (parfum) updates.parfum = parfum;
@@ -211,6 +222,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error updating order:", error);
+
     return NextResponse.json(
       { error: "Gagal mengupdate data pesanan" },
       { status: 500 },

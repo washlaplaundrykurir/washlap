@@ -15,7 +15,6 @@ import {
   useDisclosure,
 } from "@heroui/modal";
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
   User,
   MapPin,
@@ -248,6 +247,7 @@ export default function SelesaiPage() {
   useEffect(() => {
     const now = new Date();
     const firstDay = new Date(now);
+
     firstDay.setDate(now.getDate() - 7); // 8 days including today
 
     setStartDate(firstDay.toISOString().split("T")[0]);
@@ -264,6 +264,7 @@ export default function SelesaiPage() {
   const fetchAllOrders = async () => {
     if (!startDate || !endDate) {
       showToast("error", "Silakan pilih rentang tanggal terlebih dahulu");
+
       return;
     }
 
@@ -409,20 +410,20 @@ export default function SelesaiPage() {
               </span>
               <div className="flex items-center gap-2">
                 <Input
-                  type="date"
                   className="w-full sm:w-36"
                   size="sm"
-                  variant="bordered"
+                  type="date"
                   value={startDate}
+                  variant="bordered"
                   onChange={(e) => setStartDate(e.target.value)}
                 />
                 <span className="text-gray-400 font-bold">-</span>
                 <Input
-                  type="date"
                   className="w-full sm:w-36"
                   size="sm"
-                  variant="bordered"
+                  type="date"
                   value={endDate}
+                  variant="bordered"
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </div>
@@ -439,8 +440,8 @@ export default function SelesaiPage() {
                   className="w-full lg:w-64"
                   placeholder="Cari Tiket/Nota..."
                   size="sm"
-                  variant="bordered"
                   value={search}
+                  variant="bordered"
                   onValueChange={setSearch}
                 />
               </div>
@@ -450,10 +451,10 @@ export default function SelesaiPage() {
           <div className="w-px h-12 bg-gray-300 dark:bg-gray-700 hidden lg:block" />
 
           <Button
+            className="w-full lg:w-auto font-bold px-8"
             color="primary"
             isLoading={isLoading}
             size="md"
-            className="w-full lg:w-auto font-bold px-8"
             onPress={() => {
               setPage(1);
               fetchAllOrders();
