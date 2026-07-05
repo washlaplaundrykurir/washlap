@@ -80,7 +80,7 @@ export function shouldCheckNota(value: string | null | undefined): boolean {
  * every other value is treated as open and returns `true`.
  */
 export function isOpenTicket(status_id: number): boolean {
-  return status_id !== 6 && status_id !== 7;
+  return status_id === 1 || status_id === 2;
 }
 
 /**

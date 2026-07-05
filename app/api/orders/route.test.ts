@@ -135,6 +135,9 @@ const h = vi.hoisted(() => {
     not() {
       return this._chain("not");
     }
+    in() {
+      return this._chain("in");
+    }
     order() {
       return this._chain("order");
     }

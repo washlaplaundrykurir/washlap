@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
         .from("permintaan")
         .select("id, jenis_tugas, status_id, waktu_order")
         .eq("customer_id", gateCustomer.id)
-        .not("status_id", "in", "(6,7)");
+        .in("status_id", [1, 2]);
 
       if (openErr) {
         // The gate is the authoritative duplicate guard; fail closed rather

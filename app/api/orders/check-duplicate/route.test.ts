@@ -55,6 +55,7 @@ vi.mock("@/utils/supabase/server", () => {
     builder.select = vi.fn(chain);
     builder.eq = vi.fn(chain);
     builder.not = vi.fn(chain);
+    builder.in = vi.fn(chain);
     builder.order = vi.fn(chain);
     builder.then = (
       onFulfilled?: (value: unknown) => unknown,
@@ -112,7 +113,7 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("GET /api/orders/check-duplicate — open ticket match (Req 3.1, 3.8)", () => {
-  it("returns exists:true with the customer's display data for an open ticket (status 1-5)", async () => {
+  it("returns exists:true with the customer's display data for an open ticket (status 1-2)", async () => {
     mocks.queryResult = {
       data: [
         row(1, "2024-01-02T00:00:00.000Z", {
@@ -135,8 +136,8 @@ describe("GET /api/orders/check-duplicate — open ticket match (Req 3.1, 3.8)",
     expect(body.nomor_hp_local).toBe("08123456789");
   });
 
-  it("matches each Open_Ticket status 1..5 returned by the DB filter", async () => {
-    for (const status of [1, 2, 3, 4, 5]) {
+  it("matches each Open_Ticket status 1..2 returned by the DB filter", async () => {
+    for (const status of [1, 2]) {
       mocks.queryResult = {
         data: [
           row(status, "2024-05-05T10:00:00.000Z", {
@@ -198,16 +199,24 @@ describe("GET /api/orders/check-duplicate — completed/cancelled excluded (Req 
     expect(body).toEqual({ exists: false });
   });
 
-  it("defensively drops status 6/7 rows that slip through, still exists:false (belt-and-suspenders)", async () => {
-    // Even if a completed (6) or cancelled (7) row appears in `data`, the
+  it("defensively drops status >= 3 rows that slip through, still exists:false (belt-and-suspenders)", async () => {
+    // Even if a completed/cancelled/picked up row appears in `data`, the
     // route's isOpenTicket re-filter must exclude it.
     mocks.queryResult = {
       data: [
-        row(6, "2024-01-10T00:00:00.000Z", {
+        row(3, "2024-01-10T00:00:00.000Z", {
+          nomor_hp: "628123456789",
+          nama_terakhir: "SudahJemput",
+        }),
+        row(5, "2024-01-11T00:00:00.000Z", {
+          nomor_hp: "628123456789",
+          nama_terakhir: "SudahAntar",
+        }),
+        row(6, "2024-01-12T00:00:00.000Z", {
           nomor_hp: "628123456789",
           nama_terakhir: "Selesai",
         }),
-        row(7, "2024-01-11T00:00:00.000Z", {
+        row(7, "2024-01-13T00:00:00.000Z", {
           nomor_hp: "628123456789",
           nama_terakhir: "Batal",
         }),
@@ -222,14 +231,14 @@ describe("GET /api/orders/check-duplicate — completed/cancelled excluded (Req 
     expect(body).toEqual({ exists: false });
   });
 
-  it("keeps the open row and drops the completed one when mixed", async () => {
+  it("keeps the open row and drops the completed/processed one when mixed", async () => {
     mocks.queryResult = {
       data: [
-        row(6, "2024-03-01T00:00:00.000Z", {
+        row(3, "2024-03-01T00:00:00.000Z", {
           nomor_hp: "628123456789",
-          nama_terakhir: "Selesai",
+          nama_terakhir: "SudahJemput",
         }),
-        row(3, "2024-02-01T00:00:00.000Z", {
+        row(2, "2024-02-01T00:00:00.000Z", {
           nomor_hp: "628123456789",
           nama_terakhir: "MasihAktif",
         }),
@@ -241,7 +250,7 @@ describe("GET /api/orders/check-duplicate — completed/cancelled excluded (Req 
     const body = await res.json();
 
     expect(body.exists).toBe(true);
-    // The completed row (later waktu_order) must NOT win — it's filtered out.
+    // The processed row (later waktu_order) must NOT win — it's filtered out.
     expect(body.nama).toBe("MasihAktif");
   });
 });

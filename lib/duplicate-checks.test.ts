@@ -166,11 +166,10 @@ describe("shouldCheckNota (Property 8)", () => {
 // ---------------------------------------------------------------------------
 
 describe("isOpenTicket (Property 9)", () => {
-  // Feature: admin-ticket-wa-and-duplicate-warnings, Property 9: Open-ticket predicate excludes only completed/cancelled statuses
-  it("is false iff status_id is 6 or 7, and true for every other value", () => {
+  it("is true if status_id is 1 or 2, and false for every other value", () => {
     fc.assert(
       fc.property(statusIdArb, (statusId) => {
-        const expected = statusId !== 6 && statusId !== 7;
+        const expected = statusId === 1 || statusId === 2;
 
         expect(isOpenTicket(statusId)).toBe(expected);
       }),

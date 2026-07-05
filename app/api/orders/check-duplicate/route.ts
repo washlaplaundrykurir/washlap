@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
       )
       .eq("jenis_tugas", jenis)
       .eq("customers.nomor_hp", normalizedPhone)
-      .not("status_id", "in", "(6,7)")
+      .in("status_id", [1, 2])
       .order("waktu_order", { ascending: false });
 
     if (error) {
