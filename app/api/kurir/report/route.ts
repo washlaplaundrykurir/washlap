@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { createSupabaseAdmin } from "@/utils/supabase/server";
 import { requireKurir } from "@/lib/api-auth";
+import {
+  wibDayStartUtc,
+  wibDayEndExclusiveUtc,
+  formatDateIsoWIB,
+} from "@/lib/datetime";
 
 export async function GET(request: NextRequest) {
   const { user, error: authError } = await requireKurir();
@@ -23,16 +28,14 @@ export async function GET(request: NextRequest) {
       .not("waktu_kurir_selesai", "is", null);
 
     if (startDate) {
-      query = query.gte("waktu_kurir_selesai", startDate);
+      const lower = wibDayStartUtc(startDate);
+
+      if (lower) query = query.gte("waktu_kurir_selesai", lower);
     }
     if (endDate) {
-      const nextDay = new Date(endDate);
+      const upper = wibDayEndExclusiveUtc(endDate);
 
-      nextDay.setDate(nextDay.getDate() + 1);
-      query = query.lt(
-        "waktu_kurir_selesai",
-        nextDay.toISOString().split("T")[0],
-      );
+      if (upper) query = query.lt("waktu_kurir_selesai", upper);
     }
 
     const { data: tasks, error } = await query;
@@ -43,7 +46,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Process data to group by date
+    // Process data to group by date in WIB
     // Result format: Record<DateString, { jemput: 0, antar: 0, total: 0 }>
     const reportData: Record<
       string,
@@ -53,9 +56,7 @@ export async function GET(request: NextRequest) {
     tasks.forEach((task) => {
       if (!task.waktu_kurir_selesai) return;
 
-      const dateKey = new Date(task.waktu_kurir_selesai)
-        .toISOString()
-        .split("T")[0]; // YYYY-MM-DD
+      const dateKey = formatDateIsoWIB(task.waktu_kurir_selesai);
 
       if (!reportData[dateKey]) {
         reportData[dateKey] = { jemput: 0, antar: 0, total: 0 };

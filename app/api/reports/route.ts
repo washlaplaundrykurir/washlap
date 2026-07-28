@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/utils/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { wibDayStartUtc, wibDayEndExclusiveUtc } from "@/lib/datetime";
+import { calculateSLANota } from "@/lib/sla-helper";
 import {
   enrichWithNotaImports,
   type ImportedNotaRecord,
@@ -92,15 +93,23 @@ export async function GET(request: NextRequest) {
             `);
 
     // Date Filter (WIB calendar day -> UTC instants for the timestamptz column)
+    // For "rekap" performa kurir: filter by `waktu_kurir_selesai` (when task diselesaikan kurir)
+    // For other report types: filter by `waktu_order`
+    const dateField = type === "rekap" ? "waktu_kurir_selesai" : "waktu_order";
+
     if (startDate && endDate) {
       const lower = wibDayStartUtc(startDate);
       const upper = wibDayEndExclusiveUtc(endDate);
 
-      if (lower) query = query.gte("waktu_order", lower);
-      if (upper) query = query.lt("waktu_order", upper);
+      if (lower) query = query.gte(dateField, lower);
+      if (upper) query = query.lt(dateField, upper);
     }
 
-    const { data: orders, error } = await query.order("waktu_order", {
+    if (type === "rekap") {
+      query = query.not("waktu_kurir_selesai", "is", null);
+    }
+
+    const { data: orders, error } = await query.order(dateField, {
       ascending: false,
     });
 
@@ -200,6 +209,29 @@ export async function GET(request: NextRequest) {
           return `${h}j ${m}m`;
         };
 
+        let slaNotaMenit = order.sla_nota_menit;
+        let slaNotaStatus = order.sla_nota_status;
+
+        if (
+          (slaNotaMenit === null || slaNotaMenit === undefined) &&
+          order.waktu_kurir_selesai
+        ) {
+          const tglSelesaiNota =
+            order.nota_import?.tanggal_selesai || order.waktu_selesai;
+
+          if (tglSelesaiNota) {
+            const calculatedSlaNota = calculateSLANota(
+              order.waktu_kurir_selesai,
+              tglSelesaiNota,
+            );
+
+            if (calculatedSlaNota) {
+              slaNotaMenit = calculatedSlaNota.minutes;
+              slaNotaStatus = calculatedSlaNota.status;
+            }
+          }
+        }
+
         return {
           nomor_tiket: order.nomor_tiket,
           tanggal_tiket: order.waktu_order,
@@ -215,18 +247,18 @@ export async function GET(request: NextRequest) {
           tanggal_selesai_nota: order.nota_import?.tanggal_selesai || "-",
           nota_import: order.nota_import,
 
-          // Pre-calculated SLA Data from DB
+          // Pre-calculated SLA Data from DB or fallback dynamic calculation
           sla_tiket_durasi: formatDuration(order.sla_tiket_menit),
           sla_tiket_status: order.sla_tiket_status || "-",
           sla_kurir_durasi: formatDuration(order.sla_kurir_menit),
           sla_kurir_status: order.sla_kurir_status || "-",
-          sla_nota_durasi: formatDuration(order.sla_nota_menit),
-          sla_nota_status: order.sla_nota_status || "-",
+          sla_nota_durasi: formatDuration(slaNotaMenit),
+          sla_nota_status: slaNotaStatus || "-",
 
           // Sorting helper fields
           raw_sla_tiket: order.sla_tiket_menit ?? 0,
           raw_sla_kurir: order.sla_kurir_menit ?? 0,
-          raw_sla_nota: order.sla_nota_menit ?? 0,
+          raw_sla_nota: slaNotaMenit ?? 0,
 
           dibuat_oleh: (order as any).created_by_user?.full_name || "Customer",
         };

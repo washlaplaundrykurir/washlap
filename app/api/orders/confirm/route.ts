@@ -4,6 +4,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/utils/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { calculateSLANota } from "@/lib/sla-helper";
+import {
+  isValidNomorNota,
+  NOTA_VALIDATION_MESSAGE,
+} from "@/lib/nota-validation";
 
 // PUT - Confirm order with nota number
 export async function PUT(request: NextRequest) {
@@ -22,6 +26,16 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    if (
+      typeof nomor_nota === "string" &&
+      !isValidNomorNota(nomor_nota)
+    ) {
+      return NextResponse.json(
+        { error: NOTA_VALIDATION_MESSAGE },
+        { status: 400 },
+      );
+    }
+
     const { data: order } = await supabase
       .from("permintaan")
       .select("waktu_kurir_selesai")
@@ -36,7 +50,7 @@ export async function PUT(request: NextRequest) {
     };
 
     if (nomor_nota) {
-      updateData.nomor_nota = nomor_nota;
+      updateData.nomor_nota = nomor_nota.trim();
     }
 
     if (order?.waktu_kurir_selesai) {

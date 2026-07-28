@@ -4,7 +4,7 @@ import { Card, CardBody } from "@heroui/card";
 import { Input, Textarea } from "@heroui/input";
 import { Button } from "@heroui/button";
 import { RadioGroup, Radio } from "@heroui/radio";
-import { Checkbox, CheckboxGroup } from "@heroui/checkbox";
+import { Checkbox } from "@heroui/checkbox";
 import { Divider } from "@heroui/divider";
 import { useState, useEffect } from "react";
 import {
@@ -469,45 +469,77 @@ export default function Home() {
 
             <Divider className="bg-black/10 dark:bg-white/20" />
 
-            {/* Permintaan (Checkbox) */}
-            <CheckboxGroup
+            {/* Permintaan utama hanya dapat dipilih satu. */}
+            <RadioGroup
               isRequired
               classNames={{
                 wrapper: "gap-3",
                 label: "text-gray-700 dark:text-white/80",
                 description: "text-gray-500 dark:text-white/50",
               }}
-              description="Jika anda mengajukan pengantaran dan sekaligus jemput lagi, silahkan pilih keduanya. Jika anda ingin jemput saja atau hantar saja silahakan pilih salah satu."
               label="Permintaan"
-              value={formData.permintaan}
-              onValueChange={(value) => handleInputChange("permintaan", value)}
+              value={
+                formData.permintaan.includes("antar")
+                  ? "antar"
+                  : formData.permintaan.includes("jemput")
+                    ? "jemput"
+                    : ""
+              }
+              onValueChange={(value) =>
+                handleInputChange("permintaan", [value])
+              }
             >
               <div className="flex flex-col gap-1">
-                <Checkbox
+                <Radio
                   classNames={{
                     label: "text-gray-700 dark:text-white/80",
                     wrapper:
-                      "before:border-gray-400 dark:before:border-white/50",
+                      "group-data-[selected=true]:border-primary border-gray-300 dark:border-white/60",
+                  }}
+                  value="jemput"
+                >
+                  Jemput
+                </Radio>
+                <p className="text-xs text-gray-500 dark:text-white/50 ml-7">
+                  Jemput pakaian kotor yang akan dicuci.
+                </p>
+              </div>
+              <div className="flex flex-col gap-1">
+                <Radio
+                  classNames={{
+                    label: "text-gray-700 dark:text-white/80",
+                    wrapper:
+                      "group-data-[selected=true]:border-primary border-gray-300 dark:border-white/60",
                   }}
                   value="antar"
                 >
                   Antar
-                </Checkbox>
+                </Radio>
                 <p className="text-xs text-gray-500 dark:text-white/50 ml-7">
-                  Permintaan antar dapat disampaikan setelah anda mendapatkan
-                  pemberitahuan penyelesaian transaksi dari admin.
+                  Antar laundry yang sudah selesai dikerjakan. Permintaan antar
+                  dapat disampaikan setelah anda mendapatkan konfirmasi
+                  penyelesaian transaksi dari admin.
                 </p>
+                {formData.permintaan.includes("antar") && (
+                  <div className="ml-7 mt-2">
+                    <Checkbox
+                      classNames={{
+                        label: "text-sm text-gray-700 dark:text-white/80",
+                      }}
+                      isSelected={formData.permintaan.includes("jemput")}
+                      onValueChange={(isSelected) =>
+                        handleInputChange(
+                          "permintaan",
+                          isSelected ? ["antar", "jemput"] : ["antar"],
+                        )
+                      }
+                    >
+                      Sekalian jemput lagi laundry yang mau dicuci
+                    </Checkbox>
+                  </div>
+                )}
               </div>
-              <Checkbox
-                classNames={{
-                  label: "text-gray-700 dark:text-white/80",
-                  wrapper: "before:border-gray-400 dark:before:border-white/50",
-                }}
-                value="jemput"
-              >
-                Jemput
-              </Checkbox>
-            </CheckboxGroup>
+            </RadioGroup>
 
             {/* Waktu Penjemputan */}
             <div className="mb-4">

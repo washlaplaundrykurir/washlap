@@ -39,6 +39,10 @@ import {
 import { useToast } from "@/components/ToastProvider";
 import { useCouriers, useStatuses } from "@/hooks/use-master-data";
 import { formatDateTimeWIB, formatTimeAgoWIB } from "@/lib/datetime";
+import {
+  isValidNomorNota,
+  NOTA_VALIDATION_MESSAGE,
+} from "@/lib/nota-validation";
 
 interface Order {
   id: string;
@@ -210,6 +214,15 @@ function OrdersPageContent() {
       (!editForm.nomorNota || editForm.nomorNota.trim() === "")
     ) {
       showToast("error", "Nomor Nota Fisik wajib diisi untuk penugasan ANTAR.");
+
+      return;
+    }
+
+    if (
+      editForm.nomorNota?.trim() &&
+      !isValidNomorNota(editForm.nomorNota)
+    ) {
+      showToast("error", NOTA_VALIDATION_MESSAGE);
 
       return;
     }

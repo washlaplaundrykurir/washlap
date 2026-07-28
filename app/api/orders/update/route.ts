@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { createSupabaseAdmin } from "@/utils/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
+import {
+  isValidNomorNota,
+  NOTA_VALIDATION_MESSAGE,
+} from "@/lib/nota-validation";
 
 export async function PUT(request: NextRequest) {
   const { user, error: authError } = await requireAdmin();
@@ -32,6 +36,17 @@ export async function PUT(request: NextRequest) {
     if (!orderId) {
       return NextResponse.json(
         { error: "Order ID diperlukan" },
+        { status: 400 },
+      );
+    }
+
+    if (
+      typeof nomorNota === "string" &&
+      nomorNota.trim() !== "" &&
+      !isValidNomorNota(nomorNota)
+    ) {
+      return NextResponse.json(
+        { error: NOTA_VALIDATION_MESSAGE },
         { status: 400 },
       );
     }
@@ -179,7 +194,7 @@ export async function PUT(request: NextRequest) {
       updatePermintaanData.courier_id = courierId === "" ? null : courierId;
     }
     if (nomorNota !== undefined && nomorNota !== "")
-      updatePermintaanData.nomor_nota = nomorNota;
+      updatePermintaanData.nomor_nota = nomorNota.trim();
 
     // Process waktu_penjemputan mapped from frontend key
     if (

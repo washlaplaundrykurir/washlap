@@ -26,6 +26,10 @@ import {
 import { useToast } from "@/components/ToastProvider";
 import { buildDuplicateConfirmText } from "@/lib/duplicate-checks";
 import {
+  isValidNomorNota,
+  NOTA_VALIDATION_MESSAGE,
+} from "@/lib/nota-validation";
+import {
   type TicketWaData,
   buildTicketWaMessage,
   buildWaUrl,
@@ -286,6 +290,19 @@ export default function AdminPage() {
       setSubmitStatus({
         type: "error",
         message: "Nama dan Nomor HP wajib diisi!",
+      });
+      setIsLoading(false);
+
+      return;
+    }
+
+    if (
+      formData.nomorNota?.trim() &&
+      !isValidNomorNota(formData.nomorNota)
+    ) {
+      setSubmitStatus({
+        type: "error",
+        message: NOTA_VALIDATION_MESSAGE,
       });
       setIsLoading(false);
 
@@ -1064,6 +1081,16 @@ export default function AdminPage() {
                 />
 
                 <Input
+                  errorMessage={
+                    formData.nomorNota?.trim() &&
+                    !isValidNomorNota(formData.nomorNota)
+                      ? NOTA_VALIDATION_MESSAGE
+                      : undefined
+                  }
+                  isInvalid={
+                    !!formData.nomorNota?.trim() &&
+                    !isValidNomorNota(formData.nomorNota)
+                  }
                   label="Nomor Nota"
                   placeholder="Contoh: INV-001"
                   value={formData.nomorNota}

@@ -9,6 +9,10 @@ import {
   notaMatches,
   isOpenTicket,
 } from "@/lib/duplicate-checks";
+import {
+  isValidNomorNota,
+  NOTA_VALIDATION_MESSAGE,
+} from "@/lib/nota-validation";
 
 type JenisTugas = "ANTAR" | "JEMPUT";
 
@@ -56,6 +60,15 @@ export async function POST(request: NextRequest) {
       return digitsOnly;
     };
     const cleanNomorHP = normalizePhone(nomorHP?.trim() || "");
+    const trimmedNota =
+      typeof nomorNota === "string" ? nomorNota.trim() : "";
+
+    if (trimmedNota && !isValidNomorNota(trimmedNota)) {
+      return NextResponse.json(
+        { error: NOTA_VALIDATION_MESSAGE },
+        { status: 400 },
+      );
+    }
 
     if (!cleanNomorHP) {
       return NextResponse.json(
@@ -259,7 +272,6 @@ export async function POST(request: NextRequest) {
       : null;
     const alamatJalan = finalAlamat || alamat;
     // Persist the trimmed nomor_nota (OQ-6); store null when empty/whitespace.
-    const trimmedNota = typeof nomorNota === "string" ? nomorNota.trim() : "";
 
     const insertedOrders: {
       id: string;

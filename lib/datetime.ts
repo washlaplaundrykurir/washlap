@@ -71,6 +71,26 @@ export function formatDateWIB(
 }
 
 /**
+ * Format a timestamp as a WIB date ISO string (YYYY-MM-DD), e.g. "2026-05-31".
+ * Useful for grouping records by WIB calendar day.
+ * Returns "-" for missing/invalid input.
+ */
+export function formatDateIsoWIB(
+  value: string | number | Date | null | undefined,
+): string {
+  const date = toValidDate(value);
+
+  if (!date) return "-";
+
+  return new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: WIB_TIME_ZONE,
+  }).format(date);
+}
+
+/**
  * Format a timestamp as a WIB time only (no date), e.g. "20.09".
  * Returns "-" for missing/invalid input.
  */

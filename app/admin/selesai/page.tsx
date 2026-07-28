@@ -28,6 +28,10 @@ import {
 
 import { useToast } from "@/components/ToastProvider";
 import { formatDateTimeWIB } from "@/lib/datetime";
+import {
+  isValidNomorNota,
+  NOTA_VALIDATION_MESSAGE,
+} from "@/lib/nota-validation";
 
 interface Order {
   id: string;
@@ -147,6 +151,16 @@ const PendingCard = ({
             <>
               <Input
                 className="flex-1"
+                errorMessage={
+                  notaInputs[order.id]?.trim() &&
+                  !isValidNomorNota(notaInputs[order.id])
+                    ? NOTA_VALIDATION_MESSAGE
+                    : undefined
+                }
+                isInvalid={
+                  !!notaInputs[order.id]?.trim() &&
+                  !isValidNomorNota(notaInputs[order.id])
+                }
                 placeholder="Masukkan nomor nota"
                 size="sm"
                 value={notaInputs[order.id] || ""}
@@ -313,6 +327,12 @@ export default function SelesaiPage() {
 
     if (!hasExistingNota && !nota) {
       showToast("error", "Nomor nota harus diisi!");
+
+      return;
+    }
+
+    if (!hasExistingNota && !isValidNomorNota(nota ?? "")) {
+      showToast("error", NOTA_VALIDATION_MESSAGE);
 
       return;
     }
