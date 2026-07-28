@@ -193,8 +193,11 @@ export async function PUT(request: NextRequest) {
     if (courierId !== undefined) {
       updatePermintaanData.courier_id = courierId === "" ? null : courierId;
     }
-    if (nomorNota !== undefined && nomorNota !== "")
+    if (typeof nomorNota === "string" && nomorNota.trim() !== "") {
       updatePermintaanData.nomor_nota = nomorNota.trim();
+    } else if (nomorNota === null || nomorNota === "") {
+      updatePermintaanData.nomor_nota = null;
+    }
 
     // Process waktu_penjemputan mapped from frontend key
     if (
@@ -235,11 +238,11 @@ export async function PUT(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating order:", error);
 
     return NextResponse.json(
-      { error: "Gagal mengupdate data pesanan" },
+      { error: error?.message || "Gagal mengupdate data pesanan" },
       { status: 500 },
     );
   }

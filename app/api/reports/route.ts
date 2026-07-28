@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/utils/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { wibDayStartUtc, wibDayEndExclusiveUtc } from "@/lib/datetime";
-import { calculateSLANota } from "@/lib/sla-helper";
+import { calculateSLANota, calculateActiveMinutes } from "@/lib/sla-helper";
 import {
   enrichWithNotaImports,
   type ImportedNotaRecord,
@@ -265,6 +265,129 @@ export async function GET(request: NextRequest) {
       });
 
       return NextResponse.json({ data: slaData });
+    } else if (type === "sla_nota_jemput") {
+      const jemputOrders = enrichedOrders.filter(
+        (o) => o.jenis_tugas?.toUpperCase() === "JEMPUT",
+      );
+
+      const formatDuration = (mins: number | null) => {
+        if (mins === null || mins === undefined) return "-";
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+
+        return `${h}j ${m}m`;
+      };
+
+      const getWeekNumber = (dateStr: string | null) => {
+        if (!dateStr || dateStr === "-") return "-";
+        const date = new Date(dateStr);
+
+        if (Number.isNaN(date.getTime())) return "-";
+
+        const d = new Date(
+          Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+        );
+        const dayNum = d.getUTCDay() || 7;
+
+        d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+        const weekNo = Math.ceil(
+          ((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7,
+        );
+
+        return `W${weekNo}`;
+      };
+
+      let countNoNota = 0;
+      let countMeet = 0;
+      let countFailed = 0;
+
+      const detailData = jemputOrders.map((order) => {
+        const hasNota = Boolean(
+          order.nomor_nota || order.nota_import?.matched,
+        );
+        const tglInputNota =
+          order.waktu_input_nota ||
+          order.waktu_selesai ||
+          order.nota_import?.tanggal_terima ||
+          null;
+
+        let selisihInputMenit: number | null = null;
+        let slaInputStatus = "-";
+
+        if (order.waktu_kurir_selesai && tglInputNota) {
+          selisihInputMenit = calculateActiveMinutes(
+            order.waktu_kurir_selesai,
+            tglInputNota,
+            11,
+            21,
+          );
+          slaInputStatus = selisihInputMenit <= 120 ? "MEET" : "FAILED";
+        }
+
+        if (!hasNota) {
+          countNoNota++;
+        } else if (slaInputStatus === "MEET") {
+          countMeet++;
+        } else if (slaInputStatus === "FAILED") {
+          countFailed++;
+        }
+
+        const tglUploadNota = order.nota_import?.tanggal_terima || null;
+        let selisihUploadMenit: number | null = null;
+
+        if (order.waktu_kurir_selesai && tglUploadNota) {
+          selisihUploadMenit = calculateActiveMinutes(
+            order.waktu_kurir_selesai,
+            tglUploadNota,
+            11,
+            21,
+          );
+        }
+
+        return {
+          nomor_tiket: order.nomor_tiket,
+          nama_cust:
+            (order as any).customers?.nama_terakhir ||
+            order.nota_import?.nama_pelanggan ||
+            "-",
+          nomor_hp:
+            (order as any).customers?.nomor_hp ||
+            order.nota_import?.nomor_hp ||
+            "-",
+          tanggal_tiket: order.waktu_order,
+          week: getWeekNumber(order.waktu_order),
+          waktu_kurir_selesai: order.waktu_kurir_selesai || "-",
+          nomor_nota: order.nomor_nota || order.nota_import?.nomor_nota || "-",
+          tanggal_input_nota: tglInputNota || "-",
+          selisih_input_menit: selisihInputMenit,
+          selisih_input_durasi: formatDuration(selisihInputMenit),
+          sla_input_status: slaInputStatus,
+          has_uploaded_nota: order.nota_import?.matched ? "Ya" : "Tidak",
+          tanggal_nota_upload: tglUploadNota || "-",
+          selisih_upload_menit: selisihUploadMenit,
+          selisih_upload_durasi: formatDuration(selisihUploadMenit),
+          nota_import: order.nota_import,
+        };
+      });
+
+      const totalJemput = jemputOrders.length;
+      const totalSlaEvaluated = countMeet + countFailed;
+      const meetPct =
+        totalSlaEvaluated > 0
+          ? `${Math.round((countMeet / totalSlaEvaluated) * 100)}%`
+          : "0%";
+
+      return NextResponse.json({
+        summary: {
+          totalJemput,
+          countNoNota,
+          countMeet,
+          countFailed,
+          meetPct,
+        },
+        data: detailData,
+      });
     } else if (type === "logs") {
       const { data: logs, error: logsError } = await supabase
         .from("status_logs")

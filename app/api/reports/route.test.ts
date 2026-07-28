@@ -111,4 +111,15 @@ describe("GET /api/reports", () => {
     });
     expect(h.order).not.toHaveProperty("nota_import");
   });
+
+  it("returns summary and detail data for sla_nota_jemput report type", async () => {
+    const response = await GET(
+      new Request("http://localhost/api/reports?type=sla_nota_jemput") as any,
+    );
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(json.summary).toBeDefined();
+    expect(json.data).toBeInstanceOf(Array);
+  });
 });

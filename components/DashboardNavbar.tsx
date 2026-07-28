@@ -61,6 +61,11 @@ export const adminLinks: DashboardLink[] = [
     icon: <FileSpreadsheet size={20} />,
     children: [
       {
+        href: "/admin/reports/sla-nota-jemput",
+        label: "SLA Nota Jemput",
+        icon: <FileSpreadsheet size={18} />,
+      },
+      {
         href: "/admin/reports/tickets",
         label: "Daftar Tiket",
         icon: <ClipboardList size={18} />,

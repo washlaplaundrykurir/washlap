@@ -29,7 +29,7 @@ import * as XLSX from "xlsx";
 import { useToast } from "@/components/ToastProvider";
 import { WIB_TIME_ZONE } from "@/lib/datetime";
 
-type ReportTabKey = "rekap" | "sla" | "tickets" | "logs";
+type ReportTabKey = "rekap" | "sla" | "sla_nota_jemput" | "tickets" | "logs";
 
 interface ReportsClientProps {
   initialTab?: ReportTabKey;
@@ -41,6 +41,7 @@ interface ReportsClientProps {
 const tabLabels: Record<ReportTabKey, string> = {
   rekap: "Rekap Performa",
   sla: "Laporan SLA",
+  sla_nota_jemput: "SLA Nota Jemput",
   tickets: "Daftar Tiket",
   logs: "Log Aktivitas",
 };
@@ -58,6 +59,14 @@ export function ReportsClient({
   // Data states
   const [rekapData, setRekapData] = useState<any[]>([]);
   const [slaData, setSlaData] = useState<any[]>([]);
+  const [slaNotaJemputData, setSlaNotaJemputData] = useState<any[]>([]);
+  const [slaNotaJemputSummary, setSlaNotaJemputSummary] = useState<{
+    totalJemput: number;
+    countNoNota: number;
+    countMeet: number;
+    countFailed: number;
+    meetPct: string;
+  } | null>(null);
   const [ticketsData, setTicketsData] = useState<any[]>([]);
   const [logsData, setLogsData] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -67,6 +76,7 @@ export function ReportsClient({
   // Loading states
   const [isRekapLoading, setIsRekapLoading] = useState(false);
   const [isSlaLoading, setIsSlaLoading] = useState(false);
+  const [isSlaNotaJemputLoading, setIsSlaNotaJemputLoading] = useState(false);
   const [isTicketsLoading, setIsTicketsLoading] = useState(false);
   const [isLogsLoading, setIsLogsLoading] = useState(false);
 
@@ -76,6 +86,10 @@ export function ReportsClient({
     direction: "ascending",
   });
   const [slaSort, setSlaSort] = useState<SortDescriptor>({
+    column: "tanggal_tiket",
+    direction: "descending",
+  });
+  const [slaNotaJemputSort, setSlaNotaJemputSort] = useState<SortDescriptor>({
     column: "tanggal_tiket",
     direction: "descending",
   });
@@ -106,6 +120,7 @@ export function ReportsClient({
     type: string,
     setData: (d: any[]) => void,
     setLoading: (l: boolean) => void,
+    setSummary?: (s: any) => void,
   ) => {
     setLoading(true);
     try {
@@ -119,6 +134,9 @@ export function ReportsClient({
 
       if (res.ok) {
         setData(result.data || []);
+        if (setSummary && result.summary) {
+          setSummary(result.summary);
+        }
       } else {
         showToast("error", result.error || `Gagal memuat laporan ${type}`);
       }
@@ -141,6 +159,14 @@ export function ReportsClient({
     }
     if (availableTabs.includes("sla")) {
       fetchTab("sla", setSlaData, setIsSlaLoading);
+    }
+    if (availableTabs.includes("sla_nota_jemput")) {
+      fetchTab(
+        "sla_nota_jemput",
+        setSlaNotaJemputData,
+        setIsSlaNotaJemputLoading,
+        setSlaNotaJemputSummary,
+      );
     }
     if (availableTabs.includes("tickets")) {
       fetchTab("tickets", setTicketsData, setIsTicketsLoading);
@@ -270,6 +296,10 @@ export function ReportsClient({
     () => sortItems(slaData, slaSort),
     [slaData, slaSort],
   );
+  const sortedSlaNotaJemput = useMemo(
+    () => sortItems(slaNotaJemputData, slaNotaJemputSort),
+    [slaNotaJemputData, slaNotaJemputSort],
+  );
   const sortedTickets = useMemo(
     () => sortItems(ticketsData, ticketsSort),
     [ticketsData, ticketsSort],
@@ -323,6 +353,30 @@ export function ReportsClient({
         wb,
         XLSX.utils.json_to_sheet(slaExport),
         "Laporan SLA",
+      );
+    }
+
+    if (availableTabs.includes("sla_nota_jemput")) {
+      const slaJemputExport = sortedSlaNotaJemput.map((item) => ({
+        "Nomor Tiket": item.nomor_tiket,
+        "Nama Cust": item.nama_cust,
+        "Nomor HP": item.nomor_hp,
+        "Tgl Tiket": formatDate(item.tanggal_tiket),
+        Week: item.week,
+        "Tgl Kurir Selesai": formatDate(item.waktu_kurir_selesai),
+        "Nomor Nota": item.nomor_nota,
+        "Tgl Input Nota": formatDate(item.tanggal_input_nota),
+        "Selisih Input (Durasi)": item.selisih_input_durasi,
+        "Status SLA Input": item.sla_input_status,
+        "Nota Uploaded": item.has_uploaded_nota,
+        "Tgl Nota Upload": formatDate(item.tanggal_nota_upload),
+        "Selisih Upload (Durasi)": item.selisih_upload_durasi,
+      }));
+
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet(slaJemputExport),
+        "SLA Nota Jemput",
       );
     }
 
@@ -648,6 +702,153 @@ export function ReportsClient({
       );
     }
 
+    if (activeTab === "sla_nota_jemput") {
+      return (
+        <div className="space-y-4">
+          {slaNotaJemputSummary && (
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
+              <Card className="bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800">
+                <CardBody className="p-3 text-center">
+                  <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                    Total Tiket Jemput
+                  </p>
+                  <p className="text-xl font-bold text-blue-700 dark:text-blue-300">
+                    {slaNotaJemputSummary.totalJemput}
+                  </p>
+                </CardBody>
+              </Card>
+              <Card className="bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800">
+                <CardBody className="p-3 text-center">
+                  <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                    Tidak Ada Nota
+                  </p>
+                  <p className="text-xl font-bold text-amber-700 dark:text-amber-300">
+                    {slaNotaJemputSummary.countNoNota}
+                  </p>
+                </CardBody>
+              </Card>
+              <Card className="bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800">
+                <CardBody className="p-3 text-center">
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                    Input Nota &le; 2 Jam (MEET)
+                  </p>
+                  <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300">
+                    {slaNotaJemputSummary.countMeet}
+                  </p>
+                </CardBody>
+              </Card>
+              <Card className="bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800">
+                <CardBody className="p-3 text-center">
+                  <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">
+                    Input Nota &gt; 2 Jam (FAILED)
+                  </p>
+                  <p className="text-xl font-bold text-rose-700 dark:text-rose-300">
+                    {slaNotaJemputSummary.countFailed}
+                  </p>
+                </CardBody>
+              </Card>
+              <Card className="bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 col-span-2 sm:col-span-1">
+                <CardBody className="p-3 text-center">
+                  <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
+                    Persentase MEET
+                  </p>
+                  <p className="text-xl font-bold text-indigo-700 dark:text-indigo-300">
+                    {slaNotaJemputSummary.meetPct}
+                  </p>
+                </CardBody>
+              </Card>
+            </div>
+          )}
+
+          <Table
+            aria-label="Tabel SLA Nota Jemput"
+            sortDescriptor={slaNotaJemputSort}
+            onSortChange={setSlaNotaJemputSort}
+          >
+            <TableHeader>
+              <TableColumn key="nomor_tiket" allowsSorting>
+                TIKET
+              </TableColumn>
+              <TableColumn key="nama_cust" allowsSorting>
+                NAMA CUST
+              </TableColumn>
+              <TableColumn key="nomor_hp" allowsSorting>
+                NOMOR HP
+              </TableColumn>
+              <TableColumn key="tanggal_tiket" allowsSorting>
+                TGL TIKET
+              </TableColumn>
+              <TableColumn key="week" allowsSorting>
+                WEEK
+              </TableColumn>
+              <TableColumn key="waktu_kurir_selesai" allowsSorting>
+                TGL KURIR SELESAI
+              </TableColumn>
+              <TableColumn key="nomor_nota" allowsSorting>
+                NOMOR NOTA
+              </TableColumn>
+              <TableColumn key="tanggal_input_nota" allowsSorting>
+                TGL INPUT NOTA
+              </TableColumn>
+              <TableColumn key="selisih_input" allowsSorting>
+                SELISIH INPUT (MENIT)
+              </TableColumn>
+              <TableColumn key="sla_input_status" allowsSorting>
+                STATUS SLA INPUT
+              </TableColumn>
+              <TableColumn key="has_uploaded_nota" allowsSorting>
+                NOTA UPLOADED
+              </TableColumn>
+              <TableColumn key="tanggal_nota_upload" allowsSorting>
+                TGL NOTA UPLOAD
+              </TableColumn>
+              <TableColumn key="selisih_upload" allowsSorting>
+                SELISIH UPLOAD & KURIR SELESAI
+              </TableColumn>
+            </TableHeader>
+            <TableBody emptyContent="Tidak ada data." items={sortedSlaNotaJemput}>
+              {(item) => (
+                <TableRow key={item.nomor_tiket}>
+                  <TableCell className="font-mono font-medium">
+                    {item.nomor_tiket}
+                  </TableCell>
+                  <TableCell>{item.nama_cust}</TableCell>
+                  <TableCell>{item.nomor_hp}</TableCell>
+                  <TableCell>{formatDate(item.tanggal_tiket)}</TableCell>
+                  <TableCell>
+                    <Chip color="secondary" size="sm" variant="flat">
+                      {item.week}
+                    </Chip>
+                  </TableCell>
+                  <TableCell>{formatDate(item.waktu_kurir_selesai)}</TableCell>
+                  <TableCell className="font-mono">{item.nomor_nota}</TableCell>
+                  <TableCell>{formatDate(item.tanggal_input_nota)}</TableCell>
+                  <TableCell>{item.selisih_input_durasi}</TableCell>
+                  <TableCell>
+                    {renderSLAChip(
+                      item.sla_input_status,
+                      item.selisih_input_durasi,
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      color={item.has_uploaded_nota === "Ya" ? "success" : "default"}
+                      size="sm"
+                      variant="flat"
+                    >
+                      {item.has_uploaded_nota}
+                    </Chip>
+                  </TableCell>
+                  <TableCell>{formatDate(item.tanggal_nota_upload)}</TableCell>
+                  <TableCell>{item.selisih_upload_durasi}</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      );
+    }
+
     return (
       <Table
         aria-label="Tabel Log"
@@ -693,15 +894,21 @@ export function ReportsClient({
   };
 
   const isAnyLoading =
-    isRekapLoading || isSlaLoading || isTicketsLoading || isLogsLoading;
+    isRekapLoading ||
+    isSlaLoading ||
+    isSlaNotaJemputLoading ||
+    isTicketsLoading ||
+    isLogsLoading;
   const currentTabHasData =
     (activeTab === "rekap"
       ? rekapData
       : activeTab === "sla"
         ? slaData
-        : activeTab === "tickets"
-          ? ticketsData
-          : logsData
+        : activeTab === "sla_nota_jemput"
+          ? slaNotaJemputData
+          : activeTab === "tickets"
+            ? ticketsData
+            : logsData
     ).length > 0;
 
   const activeTabDescription =
@@ -709,9 +916,11 @@ export function ReportsClient({
       ? "Rekap transaksi berdasarkan tanggal tapi sudah antar/jemput oleh kurir."
       : activeTab === "sla"
         ? "Laporan SLA berdasarkan durasi proses tiket (request-selesai), durasi kurir (assign-selesai), dan durasi input nota."
-        : activeTab === "tickets"
-          ? "Daftar tiket berdasarkan rentang tanggal order."
-          : "Log perubahan status tiket.";
+        : activeTab === "sla_nota_jemput"
+          ? "Laporan SLA waktu pencatatan/input nota setelah kurir selesai melakukan penjemputan (SLA <= 2 Jam)."
+          : activeTab === "tickets"
+            ? "Daftar tiket berdasarkan rentang tanggal order."
+            : "Log perubahan status tiket.";
 
   return (
     <div className="space-y-6">
