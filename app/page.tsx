@@ -525,6 +525,8 @@ export default function Home() {
                     <Checkbox
                       classNames={{
                         label: "text-sm text-gray-700 dark:text-white/80",
+                        wrapper:
+                          "before:border-gray-400 dark:before:border-white/80 border-gray-300 dark:border-white/80 group-data-[selected=true]:border-primary",
                       }}
                       isSelected={formData.permintaan.includes("jemput")}
                       onValueChange={(isSelected) =>
