@@ -3,7 +3,8 @@
 import { Card, CardBody } from "@heroui/card";
 import { Button } from "@heroui/button";
 import { Input, Textarea } from "@heroui/input";
-import { CheckboxGroup, Checkbox } from "@heroui/checkbox";
+import { Checkbox } from "@heroui/checkbox";
+import { RadioGroup, Radio } from "@heroui/radio";
 import { Divider } from "@heroui/divider";
 import {
   Modal,
@@ -325,6 +326,16 @@ export default function AdminPage() {
       setSubmitStatus({
         type: "error",
         message: "Nama dan Nomor HP wajib diisi!",
+      });
+      setIsLoading(false);
+
+      return;
+    }
+
+    if (formData.permintaan.length === 0) {
+      setSubmitStatus({
+        type: "error",
+        message: "Mohon pilih salah satu permintaan (Antar/Jemput)",
       });
       setIsLoading(false);
 
@@ -1054,14 +1065,78 @@ export default function AdminPage() {
 
                 <Divider />
 
-                <CheckboxGroup
+                <RadioGroup
+                  isRequired
+                  classNames={{
+                    wrapper: "gap-3",
+                    label: "text-gray-700 dark:text-white/80",
+                    description: "text-gray-500 dark:text-white/50",
+                  }}
                   label="Permintaan"
-                  value={formData.permintaan}
-                  onValueChange={(v) => handleInputChange("permintaan", v)}
+                  value={
+                    formData.permintaan.includes("antar")
+                      ? "antar"
+                      : formData.permintaan.includes("jemput")
+                        ? "jemput"
+                        : ""
+                  }
+                  onValueChange={(value) =>
+                    handleInputChange("permintaan", [value])
+                  }
                 >
-                  <Checkbox value="jemput">Jemput</Checkbox>
-                  <Checkbox value="antar">Antar</Checkbox>
-                </CheckboxGroup>
+                  <div className="flex flex-col gap-1">
+                    <Radio
+                      classNames={{
+                        label: "text-gray-700 dark:text-white/80",
+                        wrapper:
+                          "group-data-[selected=true]:border-primary border-gray-300 dark:border-white/60",
+                      }}
+                      value="jemput"
+                    >
+                      Jemput
+                    </Radio>
+                    <p className="text-xs text-gray-500 dark:text-white/50 ml-7">
+                      Jemput pakaian kotor yang akan dicuci.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Radio
+                      classNames={{
+                        label: "text-gray-700 dark:text-white/80",
+                        wrapper:
+                          "group-data-[selected=true]:border-primary border-gray-300 dark:border-white/60",
+                      }}
+                      value="antar"
+                    >
+                      Antar
+                    </Radio>
+                    <p className="text-xs text-gray-500 dark:text-white/50 ml-7">
+                      Antar laundry yang sudah selesai dikerjakan. Permintaan
+                      antar dapat disampaikan setelah anda mendapatkan
+                      konfirmasi penyelesaian transaksi dari admin.
+                    </p>
+                    {formData.permintaan.includes("antar") && (
+                      <div className="ml-7 mt-2">
+                        <Checkbox
+                          classNames={{
+                            label: "text-sm text-gray-700 dark:text-white/80",
+                            wrapper:
+                              "group-data-[selected=true]:before:border-primary border-gray-300 dark:border-white/60",
+                          }}
+                          isSelected={formData.permintaan.includes("jemput")}
+                          onValueChange={(isSelected) =>
+                            handleInputChange(
+                              "permintaan",
+                              isSelected ? ["antar", "jemput"] : ["antar"],
+                            )
+                          }
+                        >
+                          Sekalian jemput lagi laundry yang mau dicuci
+                        </Checkbox>
+                      </div>
+                    )}
+                  </div>
+                </RadioGroup>
 
                 <Input
                   label="Waktu Penjemputan"

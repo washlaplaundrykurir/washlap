@@ -236,7 +236,7 @@ function setField(matcher: RegExp, value: string) {
 
 /**
  * Fill the create form: valid name + phone, optionally selecting activity
- * types. `types` uses the checkbox labels "Jemput" / "Antar".
+ * types. Antar + Jemput uses the conditional "sekalian jemput" checkbox.
  */
 async function fillForm({
   nama = "Budi",
@@ -251,10 +251,18 @@ async function fillForm({
   setField(/nomor hp/i, phone);
   setField(/alamat lengkap/i, "Jl. Merdeka 45");
 
-  for (const t of types) {
-    const cb = screen.getByRole("checkbox", { name: t });
+  if (types.includes("Antar")) {
+    await user.click(screen.getByRole("radio", { name: "Antar" }));
 
-    await user.click(cb);
+    if (types.includes("Jemput")) {
+      await user.click(
+        screen.getByRole("checkbox", {
+          name: /sekalian jemput lagi laundry yang mau dicuci/i,
+        }),
+      );
+    }
+  } else if (types.includes("Jemput")) {
+    await user.click(screen.getByRole("radio", { name: "Jemput" }));
   }
 }
 
@@ -321,7 +329,19 @@ describe("AdminPage success state + submit flow", () => {
 
     await renderPage();
     await openCreateModal();
+    expect(
+      screen.queryByRole("checkbox", {
+        name: /sekalian jemput lagi laundry yang mau dicuci/i,
+      }),
+    ).not.toBeInTheDocument();
+
     await fillForm({ types: ["Antar", "Jemput"] });
+    expect(screen.getByRole("radio", { name: "Antar" })).toBeChecked();
+    expect(
+      screen.getByRole("checkbox", {
+        name: /sekalian jemput lagi laundry yang mau dicuci/i,
+      }),
+    ).toBeChecked();
     await clickSave();
 
     const waButtons = await screen.findAllByRole("button", {
@@ -329,6 +349,11 @@ describe("AdminPage success state + submit flow", () => {
     });
 
     expect(waButtons).toHaveLength(2);
+
+    const postCall = postOrderCalls()[0];
+    const postPayload = JSON.parse(String(postCall[1]?.body));
+
+    expect(postPayload.permintaan).toEqual(["antar", "jemput"]);
 
     const antarBtn = screen.getByRole("button", {
       name: /kirim wa \(antar\)/i,
