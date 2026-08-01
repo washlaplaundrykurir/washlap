@@ -1,11 +1,21 @@
 "use client";
 
+import type { CourierTaskSummary } from "@/lib/courier-task-summary";
+
 import { Card, CardBody, CardHeader, CardFooter } from "@heroui/card";
 import { Button } from "@heroui/button";
 import { Chip } from "@heroui/chip";
 import { Spinner } from "@heroui/spinner";
 import { Select, SelectItem } from "@heroui/select";
 import { Tabs, Tab } from "@heroui/tabs";
+import {
+  Table,
+  TableHeader,
+  TableColumn,
+  TableBody,
+  TableRow,
+  TableCell,
+} from "@heroui/table";
 import {
   Modal,
   ModalContent,
@@ -34,6 +44,7 @@ import {
   ArrowDownWideNarrow,
   ListFilter,
   Copy,
+  Users,
 } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
@@ -70,6 +81,9 @@ function TugasPageContent() {
     searchParams.get("tab") || "jemput",
   );
   const [orders, setOrders] = useState<Order[]>([]);
+  const [courierSummary, setCourierSummary] = useState<CourierTaskSummary[]>(
+    [],
+  );
   const { data: couriers = [] } = useCouriers();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -92,12 +106,15 @@ function TugasPageContent() {
   const fetchOrders = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/tasks?status=pending`);
+      const response = await fetch(
+        `/api/tasks?status=pending&includeCourierSummary=true`,
+      );
       const result = await response.json();
 
       if (!response.ok) throw new Error(result.error);
 
       setOrders(result.data || []);
+      setCourierSummary(result.courierSummary || []);
       setError("");
     } catch (err: any) {
       setError(err.message || "Gagal memuat data");
@@ -199,6 +216,8 @@ function TugasPageContent() {
   };
 
   const filteredOrders = useMemo(() => {
+    if (activeTab === "rekap") return [];
+
     const type = activeTab === "jemput" ? "JEMPUT" : "ANTAR";
     let list = orders.filter((o) => o.jenis_tugas === type);
 
@@ -239,14 +258,16 @@ function TugasPageContent() {
   }, [orders, activeTab, sortCriteria, sortDirection]);
 
   const jemputCount = useMemo(
-    () => orders.filter((o) => o.jenis_tugas === "JEMPUT").length,
-    [orders],
+    () => courierSummary.reduce((total, courier) => total + courier.jemput, 0),
+    [courierSummary],
   );
 
   const antarCount = useMemo(
-    () => orders.filter((o) => o.jenis_tugas === "ANTAR").length,
-    [orders],
+    () => courierSummary.reduce((total, courier) => total + courier.antar, 0),
+    [courierSummary],
   );
+
+  const totalActiveTasks = jemputCount + antarCount;
 
   return (
     <div className="max-w-7xl mx-auto px-2 pb-10">
@@ -268,54 +289,62 @@ function TugasPageContent() {
 
         <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
           {/* Sorting Component */}
-          <div className="flex items-center gap-1 w-full sm:w-auto">
-            <Select
-              aria-label="Kriteria Urutan"
-              className="flex-1 sm:min-w-[160px]"
-              classNames={{
-                trigger: "bg-white dark:bg-zinc-800 rounded-xl font-bold h-10",
-              }}
-              placeholder="Urutkan..."
-              selectedKeys={[sortCriteria]}
-              size="sm"
-              startContent={<ListFilter className="text-gray-400" size={14} />}
-              variant="flat"
-              onSelectionChange={(keys) =>
-                setSortCriteria(Array.from(keys)[0] as string)
-              }
-            >
-              <SelectItem key="waktu_order" textValue="Waktu Order">
-                Waktu Order
-              </SelectItem>
-              <SelectItem key="waktu_penjemputan" textValue="Waktu Penjemputan">
-                Waktu Penjemputan
-              </SelectItem>
-              <SelectItem key="nama" textValue="Nama Pelanggan">
-                Nama Pelanggan
-              </SelectItem>
-              <SelectItem key="kurir" textValue="Nama Kurir">
-                Nama Kurir
-              </SelectItem>
-              <SelectItem key="tiket" textValue="Nomor Tiket">
-                Nomor Tiket
-              </SelectItem>
-            </Select>
-            <Button
-              isIconOnly
-              className="bg-white dark:bg-zinc-800 h-10 w-10 min-w-10 rounded-xl"
-              size="sm"
-              variant="flat"
-              onPress={() =>
-                setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))
-              }
-            >
-              {sortDirection === "asc" ? (
-                <ArrowUpNarrowWide className="text-blue-500" size={18} />
-              ) : (
-                <ArrowDownWideNarrow className="text-blue-500" size={18} />
-              )}
-            </Button>
-          </div>
+          {activeTab !== "rekap" && (
+            <div className="flex items-center gap-1 w-full sm:w-auto">
+              <Select
+                aria-label="Kriteria Urutan"
+                className="flex-1 sm:min-w-[160px]"
+                classNames={{
+                  trigger:
+                    "bg-white dark:bg-zinc-800 rounded-xl font-bold h-10",
+                }}
+                placeholder="Urutkan..."
+                selectedKeys={[sortCriteria]}
+                size="sm"
+                startContent={
+                  <ListFilter className="text-gray-400" size={14} />
+                }
+                variant="flat"
+                onSelectionChange={(keys) =>
+                  setSortCriteria(Array.from(keys)[0] as string)
+                }
+              >
+                <SelectItem key="waktu_order" textValue="Waktu Order">
+                  Waktu Order
+                </SelectItem>
+                <SelectItem
+                  key="waktu_penjemputan"
+                  textValue="Waktu Penjemputan"
+                >
+                  Waktu Penjemputan
+                </SelectItem>
+                <SelectItem key="nama" textValue="Nama Pelanggan">
+                  Nama Pelanggan
+                </SelectItem>
+                <SelectItem key="kurir" textValue="Nama Kurir">
+                  Nama Kurir
+                </SelectItem>
+                <SelectItem key="tiket" textValue="Nomor Tiket">
+                  Nomor Tiket
+                </SelectItem>
+              </Select>
+              <Button
+                isIconOnly
+                className="bg-white dark:bg-zinc-800 h-10 w-10 min-w-10 rounded-xl"
+                size="sm"
+                variant="flat"
+                onPress={() =>
+                  setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))
+                }
+              >
+                {sortDirection === "asc" ? (
+                  <ArrowUpNarrowWide className="text-blue-500" size={18} />
+                ) : (
+                  <ArrowDownWideNarrow className="text-blue-500" size={18} />
+                )}
+              </Button>
+            </div>
+          )}
 
           <Button
             className="font-bold bg-white dark:bg-zinc-800 w-full sm:w-auto h-10 px-4 rounded-xl"
@@ -380,6 +409,23 @@ function TugasPageContent() {
               </div>
             }
           />
+          <Tab
+            key="rekap"
+            title={
+              <div className="flex items-center space-x-2">
+                <Users size={16} />
+                <span>Rekap Kurir</span>
+                <Chip
+                  className="font-black h-5 text-[10px]"
+                  color="success"
+                  size="sm"
+                  variant="flat"
+                >
+                  {courierSummary.length}
+                </Chip>
+              </div>
+            }
+          />
         </Tabs>
 
         {error && (
@@ -403,6 +449,79 @@ function TugasPageContent() {
               Menghubungkan...
             </p>
           </div>
+        ) : activeTab === "rekap" ? (
+          <Card className="border border-black/5 dark:border-white/10 shadow-sm overflow-hidden">
+            <CardHeader className="flex items-center justify-between gap-3 border-b border-divider px-4 py-4 md:px-6">
+              <div>
+                <h2 className="font-black text-gray-900 dark:text-white">
+                  Rekap Tugas Aktif
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Jumlah tugas berstatus Ditugaskan yang masih harus dikerjakan
+                </p>
+              </div>
+              <Chip color="primary" size="sm" variant="flat">
+                {totalActiveTasks} tugas
+              </Chip>
+            </CardHeader>
+            <CardBody className="p-0">
+              <div className="overflow-x-auto">
+                <Table
+                  removeWrapper
+                  aria-label="Rekap jumlah tugas aktif per kurir"
+                  className="min-w-[520px]"
+                  classNames={{
+                    th: "bg-gray-50 dark:bg-white/5 text-[10px] font-black text-gray-500",
+                    td: "py-3",
+                  }}
+                >
+                  <TableHeader>
+                    <TableColumn>NAMA KURIR</TableColumn>
+                    <TableColumn className="text-center">
+                      HARUS ANTAR
+                    </TableColumn>
+                    <TableColumn className="text-center">
+                      HARUS JEMPUT
+                    </TableColumn>
+                    <TableColumn className="text-center">TOTAL</TableColumn>
+                  </TableHeader>
+                  <TableBody
+                    emptyContent="Belum ada kurir aktif."
+                    items={courierSummary}
+                  >
+                    {(courier) => (
+                      <TableRow key={courier.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2 font-bold text-gray-900 dark:text-white">
+                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                              <UserCheck size={15} />
+                            </span>
+                            {courier.name}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center font-bold text-blue-600 dark:text-blue-400">
+                          {courier.antar}
+                        </TableCell>
+                        <TableCell className="text-center font-bold text-purple-600 dark:text-purple-400">
+                          {courier.jemput}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Chip
+                            className="font-black"
+                            color={courier.total > 0 ? "warning" : "default"}
+                            size="sm"
+                            variant="flat"
+                          >
+                            {courier.total}
+                          </Chip>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardBody>
+          </Card>
         ) : filteredOrders.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 bg-white/10 dark:bg-white/5 rounded-2xl border-2 border-dashed border-gray-200 dark:border-zinc-800">
             <p className="text-gray-500 dark:text-gray-400 font-bold text-sm">

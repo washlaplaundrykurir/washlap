@@ -232,8 +232,16 @@ export async function GET(request: NextRequest) {
           }
         }
 
+                const courierName =
+          (order as any).auth_users?.full_name ||
+          (order as any).auth_users?.email ||
+          (Array.isArray((order as any).auth_users) &&
+            (order as any).auth_users[0]?.full_name) ||
+          "-";
+
         return {
           nomor_tiket: order.nomor_tiket,
+          nama_kurir: courierName,
           tanggal_tiket: order.waktu_order,
           waktu_penjemputan: order.waktu_penjemputan || "-",
           nomor_nota: order.nomor_nota || "-",
@@ -345,8 +353,16 @@ export async function GET(request: NextRequest) {
           );
         }
 
+        const courierName =
+          (order as any).auth_users?.full_name ||
+          (order as any).auth_users?.email ||
+          (Array.isArray((order as any).auth_users) &&
+            (order as any).auth_users[0]?.full_name) ||
+          "-";
+
         return {
           nomor_tiket: order.nomor_tiket,
+          nama_kurir: courierName,
           nama_cust:
             (order as any).customers?.nama_terakhir ||
             order.nota_import?.nama_pelanggan ||

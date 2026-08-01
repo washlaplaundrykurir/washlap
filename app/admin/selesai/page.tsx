@@ -63,6 +63,7 @@ const PendingCard = ({
   confirmOrder,
   revertOrder,
   formatDate,
+  showToast,
 }: {
   order: Order;
   notaInputs: Record<string, string>;
@@ -71,6 +72,10 @@ const PendingCard = ({
   confirmOrder: (orderId: string, hasExistingNota: boolean) => void;
   revertOrder: (orderId: string, customerId: string) => void;
   formatDate: (date: string) => string;
+  showToast: (
+    type: "success" | "error" | "warning" | "info",
+    message: string,
+  ) => void;
 }) => (
   <Card className="backdrop-blur-xl bg-yellow-50/60 dark:bg-yellow-500/10 border border-yellow-300/50 dark:border-yellow-500/30">
     <CardBody className="p-4">
@@ -161,10 +166,16 @@ const PendingCard = ({
                   !!notaInputs[order.id]?.trim() &&
                   !isValidNomorNota(notaInputs[order.id])
                 }
-                placeholder="Masukkan nomor nota"
+                placeholder="Contoh: TJI260528201554390"
                 size="sm"
                 value={notaInputs[order.id] || ""}
                 variant="flat"
+                onBlur={() => {
+                  const val = notaInputs[order.id]?.trim();
+                  if (val && !isValidNomorNota(val)) {
+                    showToast("error", NOTA_VALIDATION_MESSAGE);
+                  }
+                }}
                 onValueChange={(v) =>
                   setNotaInputs((prev) => ({ ...prev, [order.id]: v }))
                 }
@@ -552,6 +563,7 @@ export default function SelesaiPage() {
                       order={order}
                       revertOrder={initiateRevert}
                       setNotaInputs={setNotaInputs}
+                      showToast={showToast}
                     />
                   ))
                 )}
@@ -589,6 +601,7 @@ export default function SelesaiPage() {
                       order={order}
                       revertOrder={initiateRevert}
                       setNotaInputs={setNotaInputs}
+                      showToast={showToast}
                     />
                   ))
                 )}

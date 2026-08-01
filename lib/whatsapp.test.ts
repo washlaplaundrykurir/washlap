@@ -12,6 +12,7 @@ import fc from "fast-check";
 
 import {
   buildTicketWaMessage,
+  DEFAULT_TICKET_MESSAGE_TEMPLATE,
   dashIfEmpty,
   formatWaktu,
   toLocal08,
@@ -117,6 +118,37 @@ const ticketArb: fc.Arbitrary<TicketWaData> = fc.record({
 // ---------------------------------------------------------------------------
 
 describe("lib/whatsapp – buildTicketWaMessage", () => {
+  it("renders an editable template and replaces repeated placeholders", () => {
+    const ticket: TicketWaData = {
+      nomor_tiket: "J ABC 1234",
+      jenis_tugas: "JEMPUT",
+      alamat_jalan: "Jl. Melati 1",
+      waktu_penjemputan: "2026-07-31T03:00:00.000Z",
+      nama: "Ayu",
+      nomor_hp: "628123456789",
+      catatan_khusus: "Pagar hitam",
+    };
+
+    expect(
+      buildTicketWaMessage(
+        ticket,
+        "{jenis_tugas} {nomor_tiket} - {nama} - {nomor_tiket}",
+      ),
+    ).toBe("jemput J ABC 1234 - Ayu - J ABC 1234");
+  });
+
+  it("keeps the requested default confirmation copy", () => {
+    expect(DEFAULT_TICKET_MESSAGE_TEMPLATE).toContain(
+      "Permintaan {jenis_tugas} kaka sudah kami jadwalkan",
+    );
+    expect(DEFAULT_TICKET_MESSAGE_TEMPLATE).toContain(
+      "http://mauantarjemput.washlaplaundry.com",
+    );
+    expect(DEFAULT_TICKET_MESSAGE_TEMPLATE).toContain(
+      "kondisi lapangan tidak memungkinkan",
+    );
+  });
+
   // Feature: admin-ticket-wa-and-duplicate-warnings, Property 1: Message has no leftover placeholders and includes all template lines
   // Validates: Requirements 1.3
   it("has no leftover placeholder braces and includes every template line", () => {

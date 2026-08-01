@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/utils/supabase/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { wibDayStartUtc, wibDayEndExclusiveUtc } from "@/lib/datetime";
+import { buildCourierTaskSummary } from "@/lib/courier-task-summary";
 import {
   calculateSLAKurir,
   calculateSLATiket,
@@ -25,6 +26,8 @@ export async function GET(request: NextRequest) {
     const dateField = searchParams.get("dateField") || "waktu_order";
     const search = searchParams.get("search");
     const status = searchParams.get("status");
+    const includeCourierSummary =
+      searchParams.get("includeCourierSummary") === "true";
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("pageSize") || "50");
 
@@ -155,12 +158,56 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    let courierSummary = undefined;
+
+    if (includeCourierSummary) {
+      const [couriersResult, pendingTasksResult] = await Promise.all([
+        supabase
+          .from("auth_users")
+          .select("id, full_name, email")
+          .eq("role", "kurir")
+          .eq("is_active", true),
+        supabase
+          .from("permintaan")
+          .select(
+            `
+              courier_id,
+              jenis_tugas,
+              auth_users:courier_id (
+                id,
+                full_name,
+                email
+              )
+            `,
+          )
+          .eq("status_id", 2)
+          .not("courier_id", "is", null),
+      ]);
+
+      const summaryError = couriersResult.error || pendingTasksResult.error;
+
+      if (summaryError) {
+        console.error("Fetch courier task summary error:", summaryError);
+
+        return NextResponse.json(
+          { error: summaryError.message },
+          { status: 500 },
+        );
+      }
+
+      courierSummary = buildCourierTaskSummary(
+        couriersResult.data || [],
+        pendingTasksResult.data || [],
+      );
+    }
+
     return NextResponse.json({
       success: true,
       data: orders,
       total: count || 0,
       totalNoNota,
       totalWithNota,
+      courierSummary,
       page,
       pageSize,
     });

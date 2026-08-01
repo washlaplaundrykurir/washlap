@@ -698,10 +698,26 @@ function OrdersPageContent() {
                     {selectedOrder?.jenis_tugas === "ANTAR" && (
                       <Input
                         className="font-bold border-l-4 border-l-primary"
+                        errorMessage={
+                          editForm.nomorNota?.trim() &&
+                          !isValidNomorNota(editForm.nomorNota)
+                            ? NOTA_VALIDATION_MESSAGE
+                            : undefined
+                        }
+                        isInvalid={
+                          !!editForm.nomorNota?.trim() &&
+                          !isValidNomorNota(editForm.nomorNota)
+                        }
                         label="Nomor Nota Fisik"
-                        placeholder="Contoh: 12345"
+                        placeholder="Contoh: TJI260528201554390"
                         value={editForm.nomorNota}
                         variant="bordered"
+                        onBlur={() => {
+                          const val = editForm.nomorNota?.trim();
+                          if (val && !isValidNomorNota(val)) {
+                            showToast("error", NOTA_VALIDATION_MESSAGE);
+                          }
+                        }}
                         onChange={(e) =>
                           setEditForm({
                             ...editForm,

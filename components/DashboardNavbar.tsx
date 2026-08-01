@@ -15,6 +15,7 @@ import {
   LogOut,
   FileSpreadsheet,
   Clock,
+  MessageSquareText,
 } from "lucide-react";
 import React from "react";
 
@@ -55,6 +56,11 @@ export const adminLinks: DashboardLink[] = [
     superAdminOnly: true,
   },
   { href: "/admin/customers", label: "Pelanggan", icon: <User size={20} /> },
+  {
+    href: "/admin/template-pesan",
+    label: "Template Pesan",
+    icon: <MessageSquareText size={20} />,
+  },
   {
     href: "/admin/reports",
     label: "Laporan",

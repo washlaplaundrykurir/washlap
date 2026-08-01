@@ -33,6 +33,9 @@ export async function GET(request: NextRequest) {
                 google_maps_link,
                 waktu_order,
                 waktu_penjemputan,
+                waktu_assigned,
+                waktu_kurir_selesai,
+                sla_kurir_status,
                 status_id,
                 catatan_khusus,
                 courier_id,
@@ -85,12 +88,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    // Older completed tasks may not have a persisted SLA status yet. Keep the
+    // history report complete by calculating the same courier SLA on read.
+    const enrichedOrders = (orders || []).map((order) => {
+      if (order.sla_kurir_status || !order.waktu_kurir_selesai) return order;
+
+      const slaKurir = calculateSLAKurir(
+        order.waktu_assigned,
+        order.waktu_penjemputan,
+        order.waktu_kurir_selesai,
+      );
+
+      return {
+        ...order,
+        sla_kurir_status: slaKurir?.status || null,
+      };
+    });
+
     // Calculate stats — status 7 (Dibatalkan) dikecualikan dari semua hitungan
     const todayStart = new Date();
 
     todayStart.setHours(0, 0, 0, 0);
 
-    const activeOrders = orders?.filter((o) => o.status_id !== 7) || [];
+    const activeOrders = enrichedOrders.filter((o) => o.status_id !== 7);
 
     const todayTasks = activeOrders.filter(
       (o) => new Date(o.waktu_order) >= todayStart,
@@ -107,7 +127,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: orders,
+      data: enrichedOrders,
       courierName: userData?.full_name || "Kurir",
       stats: {
         todayTasks,

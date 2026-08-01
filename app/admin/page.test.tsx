@@ -122,6 +122,7 @@ let handlers: {
 
 const fetchMock = vi.fn();
 let openSpy: ReturnType<typeof vi.fn>;
+let writeTextSpy: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   events = [];
@@ -164,6 +165,11 @@ beforeEach(() => {
   });
 
   openSpy = vi.fn();
+  writeTextSpy = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: { writeText: writeTextSpy },
+  });
   vi.stubGlobal("fetch", fetchMock);
   vi.stubGlobal("open", openSpy);
 });
@@ -280,6 +286,30 @@ const validJemput: TicketWaData = {
 };
 
 describe("AdminPage success state + submit flow", () => {
+  it("copies the rendered ticket detail to the clipboard", async () => {
+    handlers.postOrders = () =>
+      jsonResponse({ success: true, orders: [validJemput], warnings: [] });
+
+    await renderPage();
+    await openCreateModal();
+    await fillForm({ types: ["Jemput"] });
+    await clickSave();
+
+    const copyButton = await screen.findByRole("button", {
+      name: /copy detail/i,
+    });
+
+    await user.click(copyButton);
+
+    expect(writeTextSpy).toHaveBeenCalledWith(
+      buildTicketWaMessage(validJemput),
+    );
+    expect(mockShowToast).toHaveBeenCalledWith(
+      "success",
+      expect.stringContaining(validJemput.nomor_tiket),
+    );
+  });
+
   // Req 1.1, 1.9: one WA button per created ticket; clicking opens the built URL.
   it("lists one WA button per created ticket and opens the built URL on click", async () => {
     handlers.postOrders = () =>

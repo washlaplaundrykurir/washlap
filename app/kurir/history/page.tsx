@@ -7,7 +7,16 @@ import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
 import { useState } from "react";
 import Link from "next/link";
-import { History, ArrowLeft, Inbox, User, MapPin } from "lucide-react";
+import {
+  History,
+  ArrowLeft,
+  Inbox,
+  User,
+  MapPin,
+  Clock3,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 
 import { formatDateTimeWIB } from "@/lib/datetime";
 
@@ -19,6 +28,8 @@ interface Order {
   alamat_jalan: string;
   google_maps_link: string;
   waktu_order: string;
+  waktu_kurir_selesai: string | null;
+  sla_kurir_status: "MEET" | "FAILED" | null;
   status_id: number;
   catatan_khusus: string;
   customers: {
@@ -53,6 +64,7 @@ const statusColors: Record<
 
 export default function KurirHistoryPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [courierName, setCourierName] = useState("Kurir");
   const [isLoading, setIsLoading] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
   const [error, setError] = useState("");
@@ -87,6 +99,7 @@ export default function KurirHistoryPage() {
       }
 
       setOrders(result.data || []);
+      if (result.courierName) setCourierName(result.courierName);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Terjadi kesalahan");
     } finally {
@@ -104,9 +117,14 @@ export default function KurirHistoryPage() {
           <History className="w-5 h-5 text-white dark:text-white" />
         </div>
         <div>
-          <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-white">
-            Riwayat Tugas
-          </h1>
+          <div className="flex flex-wrap items-baseline gap-x-2">
+            <h1 className="text-xl font-black tracking-tight text-gray-900 dark:text-white">
+              Riwayat Tugas
+            </h1>
+            <span className="text-sm font-bold text-primary-600 dark:text-primary-400">
+              {courierName}
+            </span>
+          </div>
           <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
             {hasFetched
               ? `Total: ${orders.length} tugas selesai`
@@ -250,8 +268,37 @@ export default function KurirHistoryPage() {
                           <MapPin size={14} /> {order.alamat_jalan || "-"}
                         </p>
                       </div>
-                      <div className="text-right text-sm text-gray-400 dark:text-white/40">
-                        {formatDate(order.waktu_order)}
+                      <div className="text-sm text-gray-400 dark:text-white/40 md:min-w-56 md:text-right">
+                        <p>{formatDate(order.waktu_order)}</p>
+                        {order.waktu_kurir_selesai && (
+                          <p className="mt-2 flex items-center gap-1 text-gray-600 dark:text-white/70 md:justify-end">
+                            <Clock3 size={14} />
+                            Selesai {order.jenis_tugas.toLowerCase()}:{" "}
+                            {formatDate(order.waktu_kurir_selesai)}
+                          </p>
+                        )}
+                        {order.sla_kurir_status && (
+                          <div className="mt-2 flex md:justify-end">
+                            <Chip
+                              color={
+                                order.sla_kurir_status === "MEET"
+                                  ? "success"
+                                  : "danger"
+                              }
+                              size="sm"
+                              startContent={
+                                order.sla_kurir_status === "MEET" ? (
+                                  <CheckCircle2 size={12} />
+                                ) : (
+                                  <XCircle size={12} />
+                                )
+                              }
+                              variant="flat"
+                            >
+                              {order.sla_kurir_status} SLA
+                            </Chip>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardBody>

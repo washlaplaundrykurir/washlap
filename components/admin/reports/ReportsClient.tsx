@@ -332,6 +332,7 @@ export function ReportsClient({
     if (availableTabs.includes("sla")) {
       const slaExport = sortedSla.map((item) => ({
         Tiket: item.nomor_tiket,
+        "Nama Kurir": item.nama_kurir || "-",
         "Tgl Tiket": formatDate(item.tanggal_tiket),
         "Waktu Penjemputan": formatDate(item.waktu_penjemputan),
         Nota: item.nomor_nota,
@@ -359,6 +360,7 @@ export function ReportsClient({
     if (availableTabs.includes("sla_nota_jemput")) {
       const slaJemputExport = sortedSlaNotaJemput.map((item) => ({
         "Nomor Tiket": item.nomor_tiket,
+        "Nama Kurir": item.nama_kurir || "-",
         "Nama Cust": item.nama_cust,
         "Nomor HP": item.nomor_hp,
         "Tgl Tiket": formatDate(item.tanggal_tiket),
@@ -571,6 +573,9 @@ export function ReportsClient({
             <TableColumn key="nomor_tiket" allowsSorting>
               TIKET
             </TableColumn>
+            <TableColumn key="nama_kurir" allowsSorting>
+              NAMA KURIR
+            </TableColumn>
             <TableColumn key="tanggal_tiket" allowsSorting>
               TGL TIKET
             </TableColumn>
@@ -615,6 +620,9 @@ export function ReportsClient({
             {(item) => (
               <TableRow key={item.nomor_tiket}>
                 <TableCell>{item.nomor_tiket}</TableCell>
+                <TableCell className="font-medium text-blue-600">
+                  {item.nama_kurir || "-"}
+                </TableCell>
                 <TableCell>{formatDate(item.tanggal_tiket)}</TableCell>
                 <TableCell>{formatDate(item.waktu_penjemputan)}</TableCell>
                 <TableCell>{item.nomor_nota}</TableCell>
@@ -769,6 +777,9 @@ export function ReportsClient({
               <TableColumn key="nomor_tiket" allowsSorting>
                 TIKET
               </TableColumn>
+              <TableColumn key="nama_kurir" allowsSorting>
+                NAMA KURIR
+              </TableColumn>
               <TableColumn key="nama_cust" allowsSorting>
                 NAMA CUST
               </TableColumn>
@@ -811,6 +822,9 @@ export function ReportsClient({
                 <TableRow key={item.nomor_tiket}>
                   <TableCell className="font-mono font-medium">
                     {item.nomor_tiket}
+                  </TableCell>
+                  <TableCell className="font-medium text-blue-600">
+                    {item.nama_kurir || "-"}
                   </TableCell>
                   <TableCell>{item.nama_cust}</TableCell>
                   <TableCell>{item.nomor_hp}</TableCell>

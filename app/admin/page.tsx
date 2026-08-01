@@ -21,6 +21,7 @@ import {
   Plus,
   Megaphone,
   Search,
+  Copy,
 } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
@@ -34,6 +35,7 @@ import {
   buildTicketWaMessage,
   buildWaUrl,
   activityWord,
+  DEFAULT_TICKET_MESSAGE_TEMPLATE,
 } from "@/lib/whatsapp";
 
 interface Stats {
@@ -82,6 +84,9 @@ export default function AdminPage() {
   // create form for the success view listing the created tickets, each with a
   // per-ticket "Kirim WA" action (Req 1.9, OQ-1). `null` = still on the form.
   const [savedOrders, setSavedOrders] = useState<TicketWaData[] | null>(null);
+  const [ticketMessageTemplate, setTicketMessageTemplate] = useState(
+    DEFAULT_TICKET_MESSAGE_TEMPLATE,
+  );
 
   /**
    * Open the blocking confirm modal for `match` and resolve to the admin's
@@ -272,10 +277,40 @@ export default function AdminPage() {
     }
   };
 
+  const fetchTicketMessageTemplate = async () => {
+    try {
+      const response = await fetch("/api/admin/message-template");
+
+      if (!response.ok) return;
+      const result = await response.json();
+
+      if (typeof result.template === "string" && result.template.trim()) {
+        setTicketMessageTemplate(result.template);
+      }
+    } catch {
+      // Keep the built-in template if the saved setting cannot be loaded.
+    }
+  };
+
   useEffect(() => {
     fetchStats();
     fetchUser();
+    fetchTicketMessageTemplate();
   }, []);
+
+  const copyTicketDetails = async (ticket: TicketWaData) => {
+    try {
+      await navigator.clipboard.writeText(
+        buildTicketWaMessage(ticket, ticketMessageTemplate),
+      );
+      showToast(
+        "success",
+        `Detail tiket ${ticket.nomor_tiket} berhasil disalin`,
+      );
+    } catch {
+      showToast("error", "Gagal menyalin detail tiket");
+    }
+  };
 
   const handleInputChange = (field: string, value: string | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -909,10 +944,11 @@ export default function AdminPage() {
                   </p>
                 ) : (
                   savedOrders.map((ticket, idx) => {
-                    const waUrl = buildWaUrl(
-                      ticket.nomor_hp,
-                      buildTicketWaMessage(ticket),
+                    const ticketMessage = buildTicketWaMessage(
+                      ticket,
+                      ticketMessageTemplate,
                     );
+                    const waUrl = buildWaUrl(ticket.nomor_hp, ticketMessage);
                     const label =
                       ticket.jenis_tugas === "ANTAR" ? "Antar" : "Jemput";
 
@@ -931,15 +967,25 @@ export default function AdminPage() {
                               {ticket.nama ? ` · ${ticket.nama}` : ""}
                             </span>
                           </div>
-                          {waUrl && (
+                          <div className="flex shrink-0 flex-wrap justify-end gap-2">
                             <Button
-                              className="bg-green-500 text-white shrink-0"
                               size="sm"
-                              onPress={() => window.open(waUrl, "_blank")}
+                              startContent={<Copy size={15} />}
+                              variant="flat"
+                              onPress={() => copyTicketDetails(ticket)}
                             >
-                              Kirim WA ({label})
+                              Copy Detail Tiket
                             </Button>
-                          )}
+                            {waUrl && (
+                              <Button
+                                className="bg-green-500 text-white"
+                                size="sm"
+                                onPress={() => window.open(waUrl, "_blank")}
+                              >
+                                Kirim WA ({label})
+                              </Button>
+                            )}
+                          </div>
                         </div>
                         {!waUrl && (
                           <span className="inline-block w-fit rounded-md bg-red-500/20 px-2 py-1 text-xs text-red-600">
@@ -1092,8 +1138,14 @@ export default function AdminPage() {
                     !isValidNomorNota(formData.nomorNota)
                   }
                   label="Nomor Nota"
-                  placeholder="Contoh: INV-001"
+                  placeholder="Contoh: TJI260528201554390"
                   value={formData.nomorNota}
+                  onBlur={() => {
+                    const val = formData.nomorNota?.trim();
+                    if (val && !isValidNomorNota(val)) {
+                      showToast("error", NOTA_VALIDATION_MESSAGE);
+                    }
+                  }}
                   onValueChange={(v) => handleInputChange("nomorNota", v)}
                 />
               </div>

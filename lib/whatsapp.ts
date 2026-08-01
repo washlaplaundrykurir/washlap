@@ -24,6 +24,28 @@ export interface TicketWaData {
   catatan_khusus: string | null;
 }
 
+export const TICKET_MESSAGE_PLACEHOLDERS = [
+  { token: "{jenis_tugas}", label: "Jenis tugas (antar/jemput)" },
+  { token: "{nomor_tiket}", label: "Nomor tiket" },
+  { token: "{alamat}", label: "Alamat pelanggan" },
+  { token: "{waktu}", label: "Waktu permintaan" },
+  { token: "{nama}", label: "Nama pelanggan" },
+  { token: "{nomor_hp}", label: "Nomor HP pelanggan" },
+  { token: "{catatan}", label: "Catatan permintaan" },
+] as const;
+
+export const DEFAULT_TICKET_MESSAGE_TEMPLATE = `Permintaan {jenis_tugas} kaka sudah kami jadwalkan dengan nomor tiket {nomor_tiket}
+alamat: {alamat}
+waktu: {waktu}
+Nama: {nama}
+Nomor HP: {nomor_hp}
+catatan: {catatan}
+Silahkan diinformasikan kembali jika ada informasi yang kurang tepat.
+
+Kami informasikan juga, untuk kedepannya kaka bisa mempercepat proses antrian antar/jemput kaka dengan menginput sendiri permintaan antar/jemput ke http://mauantarjemput.washlaplaundry.com
+
+Sesuai dengan ketentuan antar jemput kami, kami sampaikan kembali, kami akan mengusahakan semaksimal mungkin untuk antar/jemput sesuai dengan waktu yang kaka harapkan. Namun kami sampaikan mohon maaf sebelumnya jika terkadang kondisi lapangan tidak memungkinkan untuk antar/jemput sesuai waktu yang diharapkan`;
+
 /**
  * "ANTAR" -> "antar", "JEMPUT" -> "jemput" (Req 1.4).
  */
@@ -100,25 +122,27 @@ export function toLocal08(phone: string | null | undefined): string {
  * Build the Indonesian confirmation message with all placeholders filled and
  * no literal placeholder braces remaining (Req 1.3, 1.4, 1.7, 1.8).
  *
- * The message is assembled via direct interpolation, so the template tokens
- * never exist as literal `{...}` strings that could leak into the output.
+ * The editable template is rendered in one pass so placeholder-like text
+ * inside customer data is preserved instead of being processed again.
  */
-export function buildTicketWaMessage(ticket: TicketWaData): string {
-  const lines = [
-    `Permintaan ${activityWord(ticket.jenis_tugas)} kaka sudah kami jadwalkan dengan nomor tiket ${ticket.nomor_tiket}`,
-    `alamat: ${dashIfEmpty(ticket.alamat_jalan)}`,
-    `waktu: ${formatWaktu(ticket.waktu_penjemputan)}`,
-    `Nama: ${dashIfEmpty(ticket.nama)}`,
-    `Nomor HP: ${ticket.nomor_hp}`,
-    `catatan: ${dashIfEmpty(ticket.catatan_khusus)}`,
-    `Silahkan diinformasikan kembali jika ada informasi yang kurang tepat.`,
-    ``,
-    `Kami informasikan juga, untuk kedepannya kaka bisa mempercepat proses antrian antar/jemput kaka dengan menginput sendiri permintaan antar/jemput ke http://mauantarjemput.washlaplaundry.com`,
-    ``,
-    `Sesuai dengan ketentuan antar jemput kami, kami sampaikan kembali, kami akan mengusahakan semaksimal mungkin untuk antar/jemput sesuai dengan waktu yang kaka harapkan. Namun kami sampaikan mohon maaf sebelumnya jika terkadang kondisi lapangan tidak memungkinkan untuk antar/jemput sesuai waktu yang diharapkan`,
-  ];
+export function buildTicketWaMessage(
+  ticket: TicketWaData,
+  template: string = DEFAULT_TICKET_MESSAGE_TEMPLATE,
+): string {
+  const values: Record<string, string> = {
+    jenis_tugas: activityWord(ticket.jenis_tugas),
+    nomor_tiket: ticket.nomor_tiket,
+    alamat: dashIfEmpty(ticket.alamat_jalan),
+    waktu: formatWaktu(ticket.waktu_penjemputan),
+    nama: dashIfEmpty(ticket.nama),
+    nomor_hp: ticket.nomor_hp,
+    catatan: dashIfEmpty(ticket.catatan_khusus),
+  };
 
-  return lines.join("\n");
+  return template.replace(
+    /\{(jenis_tugas|nomor_tiket|alamat|waktu|nama|nomor_hp|catatan)\}/g,
+    (_placeholder, key: string) => values[key],
+  );
 }
 
 /**
