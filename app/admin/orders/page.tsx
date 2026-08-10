@@ -34,6 +34,7 @@ import {
   Tag,
   Map,
   Trash2,
+  Copy,
 } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
@@ -43,6 +44,10 @@ import {
   isValidNomorNota,
   NOTA_VALIDATION_MESSAGE,
 } from "@/lib/nota-validation";
+import {
+  buildTicketWaMessage,
+  DEFAULT_TICKET_MESSAGE_TEMPLATE,
+} from "@/lib/whatsapp";
 
 interface Order {
   id: string;
@@ -86,6 +91,9 @@ function OrdersPageContent() {
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [userRole, setUserRole] = useState<string>("");
+  const [ticketMessageTemplate, setTicketMessageTemplate] = useState(
+    DEFAULT_TICKET_MESSAGE_TEMPLATE,
+  );
   const { showToast } = useToast();
 
   // Sorting State
@@ -108,7 +116,23 @@ function OrdersPageContent() {
   useEffect(() => {
     fetchOrders();
     fetchUserRole();
+    fetchTicketMessageTemplate();
   }, []);
+
+  const fetchTicketMessageTemplate = async () => {
+    try {
+      const response = await fetch("/api/admin/message-template");
+
+      if (!response.ok) return;
+      const result = await response.json();
+
+      if (typeof result.template === "string" && result.template.trim()) {
+        setTicketMessageTemplate(result.template);
+      }
+    } catch {
+      // Tetap gunakan template bawaan jika template tersimpan gagal dimuat.
+    }
+  };
 
   const fetchUserRole = async () => {
     try {
@@ -174,6 +198,31 @@ function OrdersPageContent() {
     cancelModal.onOpen();
   };
 
+  const copyTicketDetails = async (order: Order) => {
+    try {
+      await navigator.clipboard.writeText(
+        buildTicketWaMessage(
+          {
+            nomor_tiket: order.nomor_tiket,
+            jenis_tugas: order.jenis_tugas as "ANTAR" | "JEMPUT",
+            alamat_jalan: order.alamat_jalan,
+            waktu_penjemputan: order.waktu_penjemputan,
+            nama: order.customers?.nama_terakhir || null,
+            nomor_hp: order.customers?.nomor_hp || "-",
+            catatan_khusus: order.catatan_khusus,
+          },
+          ticketMessageTemplate,
+        ),
+      );
+      showToast(
+        "success",
+        `Detail tiket ${order.nomor_tiket} berhasil disalin`,
+      );
+    } catch {
+      showToast("error", "Gagal menyalin detail tiket");
+    }
+  };
+
   const handleCancelOrder = async () => {
     if (!selectedOrder) return;
     try {
@@ -218,10 +267,7 @@ function OrdersPageContent() {
       return;
     }
 
-    if (
-      editForm.nomorNota?.trim() &&
-      !isValidNomorNota(editForm.nomorNota)
-    ) {
+    if (editForm.nomorNota?.trim() && !isValidNomorNota(editForm.nomorNota)) {
       showToast("error", NOTA_VALIDATION_MESSAGE);
 
       return;
@@ -479,32 +525,43 @@ function OrdersPageContent() {
                   </div>
                 </CardBody>
 
-                <CardFooter className="px-4 py-3 bg-gray-50/50 dark:bg-white/5 border-t border-divider flex justify-between items-center gap-2">
+                <CardFooter className="px-4 py-3 bg-gray-50/50 dark:bg-white/5 border-t border-divider flex flex-col items-stretch gap-2">
                   <Button
-                    isIconOnly
-                    className="h-10 w-10 min-w-10 rounded-xl"
-                    color="danger"
-                    isDisabled={
-                      userRole === "super-admin" && order.status_id >= 2
-                    }
-                    title={
-                      userRole === "super-admin" && order.status_id >= 2
-                        ? "Tiket yang sudah ditugaskan hanya dapat dibatalkan oleh admin"
-                        : "Batalkan tiket"
-                    }
-                    variant="flat"
-                    onPress={() => handleOpenCancel(order)}
-                  >
-                    <Trash2 size={18} />
-                  </Button>
-                  <Button
-                    className="font-black h-10 flex-1 shadow-sm rounded-xl"
+                    className="font-black h-9 w-full rounded-xl"
                     color="primary"
-                    endContent={<ChevronRight size={18} />}
-                    onPress={() => handleOpenEdit(order)}
+                    startContent={<Copy size={16} />}
+                    variant="flat"
+                    onPress={() => copyTicketDetails(order)}
                   >
-                    Tugaskan Kurir
+                    Copy Detail Tiket
                   </Button>
+                  <div className="flex items-center gap-2 w-full">
+                    <Button
+                      isIconOnly
+                      className="h-10 w-10 min-w-10 rounded-xl"
+                      color="danger"
+                      isDisabled={
+                        userRole === "super-admin" && order.status_id >= 2
+                      }
+                      title={
+                        userRole === "super-admin" && order.status_id >= 2
+                          ? "Tiket yang sudah ditugaskan hanya dapat dibatalkan oleh admin"
+                          : "Batalkan tiket"
+                      }
+                      variant="flat"
+                      onPress={() => handleOpenCancel(order)}
+                    >
+                      <Trash2 size={18} />
+                    </Button>
+                    <Button
+                      className="font-black h-10 flex-1 shadow-sm rounded-xl"
+                      color="primary"
+                      endContent={<ChevronRight size={18} />}
+                      onPress={() => handleOpenEdit(order)}
+                    >
+                      Tugaskan Kurir
+                    </Button>
+                  </div>
                 </CardFooter>
               </Card>
             ))}
@@ -714,6 +771,7 @@ function OrdersPageContent() {
                         variant="bordered"
                         onBlur={() => {
                           const val = editForm.nomorNota?.trim();
+
                           if (val && !isValidNomorNota(val)) {
                             showToast("error", NOTA_VALIDATION_MESSAGE);
                           }

@@ -50,6 +50,10 @@ import {
 import { useToast } from "@/components/ToastProvider";
 import { useCouriers } from "@/hooks/use-master-data";
 import { formatDateTimeWIB, formatTimeAgoWIB } from "@/lib/datetime";
+import {
+  buildTicketWaMessage,
+  DEFAULT_TICKET_MESSAGE_TEMPLATE,
+} from "@/lib/whatsapp";
 
 interface Order {
   id: string;
@@ -88,6 +92,9 @@ function TugasPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [ticketMessageTemplate, setTicketMessageTemplate] = useState(
+    DEFAULT_TICKET_MESSAGE_TEMPLATE,
+  );
 
   // Sorting State
   const [sortCriteria, setSortCriteria] = useState("waktu_order");
@@ -101,7 +108,23 @@ function TugasPageContent() {
 
   useEffect(() => {
     fetchOrders();
+    fetchTicketMessageTemplate();
   }, []);
+
+  const fetchTicketMessageTemplate = async () => {
+    try {
+      const response = await fetch("/api/admin/message-template");
+
+      if (!response.ok) return;
+      const result = await response.json();
+
+      if (typeof result.template === "string" && result.template.trim()) {
+        setTicketMessageTemplate(result.template);
+      }
+    } catch {
+      // Tetap gunakan template bawaan jika template tersimpan gagal dimuat.
+    }
+  };
 
   const fetchOrders = async () => {
     try {
@@ -183,6 +206,31 @@ function TugasPageContent() {
       .catch(() => {
         showToast("error", "Gagal menyalin nomor.");
       });
+  };
+
+  const copyTicketDetails = async (order: Order) => {
+    try {
+      await navigator.clipboard.writeText(
+        buildTicketWaMessage(
+          {
+            nomor_tiket: order.nomor_tiket,
+            jenis_tugas: order.jenis_tugas as "ANTAR" | "JEMPUT",
+            alamat_jalan: order.alamat_jalan,
+            waktu_penjemputan: order.waktu_penjemputan,
+            nama: order.customers?.nama_terakhir || null,
+            nomor_hp: order.customers?.nomor_hp || "-",
+            catatan_khusus: order.catatan_khusus,
+          },
+          ticketMessageTemplate,
+        ),
+      );
+      showToast(
+        "success",
+        `Detail tiket ${order.nomor_tiket} berhasil disalin`,
+      );
+    } catch {
+      showToast("error", "Gagal menyalin detail tiket");
+    }
   };
 
   const formatDate = (dateString: string | null) =>
@@ -670,42 +718,54 @@ function TugasPageContent() {
                   </div>
                 </CardBody>
 
-                <CardFooter className="px-4 py-3 bg-gray-50/50 dark:bg-white/5 border-t border-divider flex justify-between items-center gap-2">
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[7px] uppercase text-gray-400 font-black block mb-0.5">
-                      Kurir
-                    </span>
-                    <div className="flex items-center gap-1 text-[11px] font-black text-blue-600 dark:text-blue-400 truncate">
-                      <UserCheck className="shrink-0" size={10} />
-                      <span className="truncate">
-                        {order.auth_users?.full_name || "Unassigned"}
+                <CardFooter className="px-4 py-3 bg-gray-50/50 dark:bg-white/5 border-t border-divider flex flex-col items-stretch gap-2">
+                  <Button
+                    className="font-black h-8 w-full text-[10px]"
+                    color="primary"
+                    size="sm"
+                    startContent={<Copy size={14} />}
+                    variant="flat"
+                    onPress={() => copyTicketDetails(order)}
+                  >
+                    Copy Detail Tiket
+                  </Button>
+                  <div className="flex justify-between items-center gap-2 w-full">
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[7px] uppercase text-gray-400 font-black block mb-0.5">
+                        Kurir
                       </span>
+                      <div className="flex items-center gap-1 text-[11px] font-black text-blue-600 dark:text-blue-400 truncate">
+                        <UserCheck className="shrink-0" size={10} />
+                        <span className="truncate">
+                          {order.auth_users?.full_name || "Unassigned"}
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-1.5 pt-0.5">
-                    <Button
-                      className="bg-zinc-200 dark:bg-zinc-800 font-bold h-8 px-3 text-[10px] min-w-0"
-                      size="sm"
-                      variant="flat"
-                      onPress={() => {
-                        setSelectedOrder(order);
-                        setSelectedCourier(order.courier_id || "");
-                        assignModal.onOpen();
-                      }}
-                    >
-                      Ganti
-                    </Button>
-                    <Button
-                      className="font-black h-8 px-4 text-[10px] shadow-sm min-w-0"
-                      color="success"
-                      isLoading={actionLoading === order.id}
-                      size="sm"
-                      variant="solid"
-                      onPress={() => handleComplete(order.id)}
-                    >
-                      {activeTab === "jemput" ? "Jemput" : "Antar"}
-                    </Button>
+                    <div className="flex items-center gap-1.5 pt-0.5">
+                      <Button
+                        className="bg-zinc-200 dark:bg-zinc-800 font-bold h-8 px-3 text-[10px] min-w-0"
+                        size="sm"
+                        variant="flat"
+                        onPress={() => {
+                          setSelectedOrder(order);
+                          setSelectedCourier(order.courier_id || "");
+                          assignModal.onOpen();
+                        }}
+                      >
+                        Ganti
+                      </Button>
+                      <Button
+                        className="font-black h-8 px-4 text-[10px] shadow-sm min-w-0"
+                        color="success"
+                        isLoading={actionLoading === order.id}
+                        size="sm"
+                        variant="solid"
+                        onPress={() => handleComplete(order.id)}
+                      >
+                        {activeTab === "jemput" ? "Jemput" : "Antar"}
+                      </Button>
+                    </div>
                   </div>
                 </CardFooter>
               </Card>
