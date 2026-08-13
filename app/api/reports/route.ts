@@ -275,15 +275,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ data: slaData });
     } else if (type === "sla_nota_jemput") {
       const jemputOrders = enrichedOrders.filter(
-        (o) => o.jenis_tugas?.toUpperCase() === "JEMPUT",
+        (o) =>
+          o.jenis_tugas?.toUpperCase() === "JEMPUT" &&
+          o.status_id !== 7 &&
+          Boolean(o.waktu_kurir_selesai),
       );
 
       const formatDuration = (mins: number | null) => {
         if (mins === null || mins === undefined) return "-";
-        const h = Math.floor(mins / 60);
-        const m = mins % 60;
+        const sign = mins < 0 ? "-" : "";
+        const absoluteMinutes = Math.abs(mins);
+        const h = Math.floor(absoluteMinutes / 60);
+        const m = absoluteMinutes % 60;
 
-        return `${h}j ${m}m`;
+        return `${sign}${h}j ${m}m`;
       };
 
       const getWeekNumber = (dateStr: string | null) => {
@@ -324,13 +329,27 @@ export async function GET(request: NextRequest) {
         let slaInputStatus = "-";
 
         if (order.waktu_kurir_selesai && tglInputNota) {
-          selisihInputMenit = calculateActiveMinutes(
-            order.waktu_kurir_selesai,
-            tglInputNota,
-            11,
-            21,
-          );
-          slaInputStatus = selisihInputMenit <= 120 ? "MEET" : "FAILED";
+          const kurirSelesaiAt = new Date(order.waktu_kurir_selesai).getTime();
+          const inputNotaAt = new Date(tglInputNota).getTime();
+          const isInputBeforeCourierCompletion = inputNotaAt < kurirSelesaiAt;
+
+          selisihInputMenit = isInputBeforeCourierCompletion
+            ? -calculateActiveMinutes(
+                tglInputNota,
+                order.waktu_kurir_selesai,
+                11,
+                21,
+              )
+            : calculateActiveMinutes(
+                order.waktu_kurir_selesai,
+                tglInputNota,
+                11,
+                21,
+              );
+          slaInputStatus =
+            isInputBeforeCourierCompletion || selisihInputMenit > 120
+              ? "FAILED"
+              : "MEET";
         }
 
         if (!hasNota) {

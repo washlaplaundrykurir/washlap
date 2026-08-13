@@ -5,13 +5,14 @@ const h = vi.hoisted(() => {
     id: "order-1",
     nomor_tiket: "A KIK 1234",
     nomor_nota: "SXA260525205126934",
-    jenis_tugas: "ANTAR",
+    jenis_tugas: "JEMPUT",
     waktu_order: "2026-05-25T12:00:00.000Z",
     waktu_penjemputan: null,
     waktu_assigned: null,
     waktu_kurir_selesai: "2026-05-25T13:00:00.000Z",
     waktu_selesai: "2026-06-01T01:00:00.000Z",
     waktu_input_nota: null,
+    status_id: 6,
     sla_tiket_menit: null,
     sla_tiket_status: null,
     sla_kurir_menit: null,
@@ -21,6 +22,29 @@ const h = vi.hoisted(() => {
     customers: { nomor_hp: "0813-2004-1683", nama_terakhir: "Kiki" },
     created_by_user: { full_name: "Admin" },
   };
+  const orders = [
+    order,
+    {
+      ...order,
+      id: "order-cancelled",
+      nomor_tiket: "J CAN 0001",
+      status_id: 7,
+    },
+    {
+      ...order,
+      id: "order-not-completed-by-courier",
+      nomor_tiket: "J PENDING 0002",
+      waktu_kurir_selesai: null,
+    },
+    {
+      ...order,
+      id: "order-negative-sla",
+      nomor_tiket: "J NEG 0003",
+      nomor_nota: "NEG260525200000001",
+      waktu_kurir_selesai: "2026-05-25T13:00:00.000Z",
+      waktu_selesai: null,
+    },
+  ];
 
   class Builder {
     _table: string;
@@ -50,7 +74,7 @@ const h = vi.hoisted(() => {
 
     _resolve() {
       if (this._table === "permintaan") {
-        return { data: [order], error: null };
+        return { data: orders, error: null };
       }
 
       if (this._table === "imported_nota_transactions") {
@@ -62,6 +86,13 @@ const h = vi.hoisted(() => {
               nama_pelanggan: "Kiki / Rizkiani",
               tanggal_terima: "2026-05-25T13:51:00.000Z",
               tanggal_selesai: "2026-05-29T13:52:00.000Z",
+            },
+            {
+              nomor_nota: "NEG260525200000001",
+              nomor_hp: "6281320041683",
+              nama_pelanggan: "Kiki / Rizkiani",
+              tanggal_terima: "2026-05-25T12:00:00.000Z",
+              tanggal_selesai: null,
             },
           ],
           error: null,
@@ -119,7 +150,19 @@ describe("GET /api/reports", () => {
     const json = await response.json();
 
     expect(response.status).toBe(200);
-    expect(json.summary).toBeDefined();
-    expect(json.data).toBeInstanceOf(Array);
+    expect(json.summary).toMatchObject({
+      totalJemput: 2,
+      countNoNota: 0,
+      countMeet: 0,
+      countFailed: 2,
+    });
+    expect(json.data).toHaveLength(2);
+    expect(json.data[0].nomor_tiket).toBe("A KIK 1234");
+    expect(json.data[1]).toMatchObject({
+      nomor_tiket: "J NEG 0003",
+      selisih_input_menit: -60,
+      selisih_input_durasi: "-1j 0m",
+      sla_input_status: "FAILED",
+    });
   });
 });
