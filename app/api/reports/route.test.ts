@@ -1,6 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => {
+  const calls = {
+    gte: [] as any[],
+    lt: [] as any[],
+    not: [] as any[],
+    order: [] as any[],
+  };
   const order = {
     id: "order-1",
     nomor_tiket: "A KIK 1234",
@@ -56,13 +62,24 @@ const h = vi.hoisted(() => {
     select() {
       return this;
     }
-    gte() {
+    gte(...args: any[]) {
+      calls.gte.push(args);
+
       return this;
     }
-    lt() {
+    lt(...args: any[]) {
+      calls.lt.push(args);
+
       return this;
     }
-    order() {
+    not(...args: any[]) {
+      calls.not.push(args);
+
+      return this;
+    }
+    order(...args: any[]) {
+      calls.order.push(args);
+
       return this;
     }
     in() {
@@ -104,6 +121,7 @@ const h = vi.hoisted(() => {
   }
 
   return {
+    calls,
     order,
     makeAdminClient: () => ({
       from: (table: string) => new Builder(table),
@@ -122,6 +140,33 @@ vi.mock("@/lib/api-auth", () => ({
 import { GET } from "./route";
 
 describe("GET /api/reports", () => {
+  beforeEach(() => {
+    h.calls.gte.length = 0;
+    h.calls.lt.length = 0;
+    h.calls.not.length = 0;
+    h.calls.order.length = 0;
+  });
+
+  it("filters courier recap by ticket date while requiring courier completion", async () => {
+    const response = await GET(
+      new Request(
+        "http://localhost/api/reports?type=rekap&startDate=2026-08-09&endDate=2026-08-15",
+      ) as any,
+    );
+
+    expect(response.status).toBe(200);
+    expect(h.calls.gte).toContainEqual([
+      "waktu_order",
+      "2026-08-08T17:00:00.000Z",
+    ]);
+    expect(h.calls.lt).toContainEqual([
+      "waktu_order",
+      "2026-08-15T17:00:00.000Z",
+    ]);
+    expect(h.calls.not).toContainEqual(["waktu_kurir_selesai", "is", null]);
+    expect(h.calls.order).toContainEqual(["waktu_order", { ascending: false }]);
+  });
+
   it("enriches SLA report rows with imported nota data without mutating permintaan rows", async () => {
     const response = await GET(
       new Request("http://localhost/api/reports?type=sla") as any,

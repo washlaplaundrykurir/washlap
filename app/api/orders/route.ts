@@ -60,8 +60,7 @@ export async function POST(request: NextRequest) {
       return digitsOnly;
     };
     const cleanNomorHP = normalizePhone(nomorHP?.trim() || "");
-    const trimmedNota =
-      typeof nomorNota === "string" ? nomorNota.trim() : "";
+    const trimmedNota = typeof nomorNota === "string" ? nomorNota.trim() : "";
 
     if (trimmedNota && !isValidNomorNota(trimmedNota)) {
       return NextResponse.json(

@@ -45,6 +45,9 @@ import {
   ListFilter,
   Copy,
   Users,
+  ArrowUp,
+  ArrowDown,
+  ListOrdered,
 } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
@@ -64,6 +67,7 @@ interface Order {
   waktu_order: string;
   waktu_penjemputan: string | null;
   status_id: number;
+  urutan_kurir?: number | null;
   catatan_khusus: string;
   courier_id: string | null;
   customers: { id: string; nomor_hp: string; nama_terakhir: string } | null;
@@ -105,6 +109,12 @@ function TugasPageContent() {
   const assignModal = useDisclosure();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedCourier, setSelectedCourier] = useState<string>("");
+
+  // Reorder Modal State
+  const reorderModal = useDisclosure();
+  const [reorderCourierId, setReorderCourierId] = useState<string>("");
+  const [reorderTasks, setReorderTasks] = useState<Order[]>([]);
+  const [isSavingReorder, setIsSavingReorder] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -170,6 +180,92 @@ function TugasPageContent() {
       showToast("error", err.message || "Gagal menugaskan kurir");
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const loadTasksForCourier = (cId: string, sourceOrders = orders) => {
+    if (!cId) {
+      setReorderTasks([]);
+
+      return;
+    }
+    // Filter active assigned tasks for this courier
+    const courierOrders = sourceOrders.filter(
+      (o) => o.courier_id === cId && o.status_id === 2,
+    );
+    // Sort by urutan_kurir ascending (nulls last), then waktu_order ascending
+    const sorted = [...courierOrders].sort((a, b) => {
+      const orderA = a.urutan_kurir ?? Number.MAX_SAFE_INTEGER;
+      const orderB = b.urutan_kurir ?? Number.MAX_SAFE_INTEGER;
+
+      if (orderA !== orderB) return orderA - orderB;
+
+      return (
+        new Date(a.waktu_order).getTime() - new Date(b.waktu_order).getTime()
+      );
+    });
+
+    setReorderTasks(sorted);
+  };
+
+  const openReorderModal = (targetCourierId?: string) => {
+    const courierIdToUse =
+      targetCourierId || (couriers.length > 0 ? couriers[0].id : "");
+
+    setReorderCourierId(courierIdToUse);
+    loadTasksForCourier(courierIdToUse);
+    reorderModal.onOpen();
+  };
+
+  const handleCourierChangeInReorder = (cId: string) => {
+    setReorderCourierId(cId);
+    loadTasksForCourier(cId);
+  };
+
+  const moveReorderTask = (index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+
+    if (targetIndex < 0 || targetIndex >= reorderTasks.length) return;
+
+    const updated = [...reorderTasks];
+    const temp = updated[index];
+
+    updated[index] = updated[targetIndex];
+    updated[targetIndex] = temp;
+    setReorderTasks(updated);
+  };
+
+  const handleSaveReorder = async () => {
+    if (!reorderCourierId || reorderTasks.length === 0) {
+      reorderModal.onClose();
+
+      return;
+    }
+
+    try {
+      setIsSavingReorder(true);
+      const response = await fetch("/api/tasks/reorder", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          courier_id: reorderCourierId,
+          task_ids: reorderTasks.map((t) => t.id),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Gagal menyimpan urutan tugas");
+      }
+
+      showToast("success", "Urutan pengantaran kurir berhasil disimpan!");
+      reorderModal.onClose();
+      fetchOrders();
+    } catch (err: any) {
+      showToast("error", err.message || "Gagal menyimpan urutan tugas");
+    } finally {
+      setIsSavingReorder(false);
     }
   };
 
@@ -282,6 +378,10 @@ function TugasPageContent() {
           valA = new Date(a.waktu_penjemputan || 0).getTime();
           valB = new Date(b.waktu_penjemputan || 0).getTime();
           break;
+        case "urutan":
+          valA = a.urutan_kurir ?? 999999;
+          valB = b.urutan_kurir ?? 999999;
+          break;
         case "nama":
           valA = (a.customers?.nama_terakhir || "").toLowerCase();
           valB = (b.customers?.nama_terakhir || "").toLowerCase();
@@ -357,6 +457,9 @@ function TugasPageContent() {
                   setSortCriteria(Array.from(keys)[0] as string)
                 }
               >
+                <SelectItem key="urutan" textValue="Urutan / Prioritas Kurir">
+                  Urutan / Prioritas Kurir
+                </SelectItem>
                 <SelectItem key="waktu_order" textValue="Waktu Order">
                   Waktu Order
                 </SelectItem>
@@ -393,6 +496,16 @@ function TugasPageContent() {
               </Button>
             </div>
           )}
+
+          <Button
+            className="font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 w-full sm:w-auto h-10 px-3.5 rounded-xl"
+            size="sm"
+            startContent={<ListOrdered size={16} />}
+            variant="flat"
+            onPress={() => openReorderModal()}
+          >
+            Atur Urutan
+          </Button>
 
           <Button
             className="font-bold bg-white dark:bg-zinc-800 w-full sm:w-auto h-10 px-4 rounded-xl"
@@ -532,6 +645,7 @@ function TugasPageContent() {
                       HARUS JEMPUT
                     </TableColumn>
                     <TableColumn className="text-center">TOTAL</TableColumn>
+                    <TableColumn className="text-center">AKSI</TableColumn>
                   </TableHeader>
                   <TableBody
                     emptyContent="Belum ada kurir aktif."
@@ -563,6 +677,19 @@ function TugasPageContent() {
                             {courier.total}
                           </Chip>
                         </TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            className="font-bold text-[10px] h-7 px-2.5 rounded-lg"
+                            color="primary"
+                            isDisabled={courier.total === 0}
+                            size="sm"
+                            startContent={<ListOrdered size={13} />}
+                            variant="flat"
+                            onPress={() => openReorderModal(courier.id)}
+                          >
+                            Atur Rute
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     )}
                   </TableBody>
@@ -589,6 +716,18 @@ function TugasPageContent() {
                 />
                 <CardHeader className="flex justify-between items-center px-4 pt-4 pb-2">
                   <div className="flex items-center gap-2 flex-wrap">
+                    {order.urutan_kurir ? (
+                      <Chip
+                        className="font-black text-[9px] h-5 px-1.5"
+                        color={order.urutan_kurir === 1 ? "warning" : "default"}
+                        size="sm"
+                        variant={order.urutan_kurir === 1 ? "solid" : "flat"}
+                      >
+                        {order.urutan_kurir === 1
+                          ? `⚡ #${order.urutan_kurir}`
+                          : `#${order.urutan_kurir}`}
+                      </Chip>
+                    ) : null}
                     <span className="font-black text-base md:text-xl text-gray-800 dark:text-white">
                       {order.nomor_tiket}
                     </span>
@@ -840,6 +979,184 @@ function TugasPageContent() {
               onPress={handleAssign}
             >
               Simpan
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Reorder Tasks Modal */}
+      <Modal
+        backdrop="blur"
+        isOpen={reorderModal.isOpen}
+        placement="center"
+        size="lg"
+        onClose={reorderModal.onClose}
+      >
+        <ModalContent className="bg-white dark:bg-zinc-900 border border-divider max-h-[90vh]">
+          <ModalHeader className="flex flex-col gap-1 pb-2 pt-5 px-6 border-b border-divider">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-blue-500/10 text-blue-600 rounded-xl">
+                <ListOrdered size={20} />
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-gray-900 dark:text-white">
+                  Atur Urutan Antaran Kurir
+                </h2>
+                <p className="text-gray-400 text-xs font-medium">
+                  Sesuaikan urutan prioritas tugas yang tampil di aplikasi kurir
+                </p>
+              </div>
+            </div>
+          </ModalHeader>
+          <ModalBody className="py-4 px-6 overflow-y-auto max-h-[60vh] space-y-4">
+            <div>
+              <div className="text-xs font-bold text-gray-600 dark:text-gray-300 block mb-1.5">
+                Pilih Kurir
+              </div>
+              <Select
+                aria-label="Pilih Kurir untuk Urutan"
+                classNames={{ trigger: "rounded-xl font-bold" }}
+                placeholder="Pilih kurir..."
+                selectedKeys={reorderCourierId ? [reorderCourierId] : []}
+                size="sm"
+                variant="bordered"
+                onSelectionChange={(k) =>
+                  handleCourierChangeInReorder(Array.from(k)[0] as string)
+                }
+              >
+                {couriers.map((c: any) => (
+                  <SelectItem key={c.id} textValue={c.full_name || c.email}>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold">
+                        {c.full_name || "Tanpa Nama"}
+                      </span>
+                      <span className="text-[10px] text-gray-400">
+                        {c.email}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-200">
+                  Daftar Tugas Aktif ({reorderTasks.length})
+                </span>
+                <span className="text-[10px] text-gray-400">
+                  Gunakan tombol ▲ / ▼ untuk memindahkan prioritas
+                </span>
+              </div>
+
+              {reorderTasks.length === 0 ? (
+                <div className="py-8 text-center bg-gray-50 dark:bg-white/5 rounded-xl border border-dashed border-divider">
+                  <p className="text-xs text-gray-400 font-medium">
+                    Tidak ada tugas aktif (status Ditugaskan) untuk kurir ini.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {reorderTasks.map((task, index) => (
+                    <div
+                      key={task.id}
+                      className={`flex items-center justify-between gap-3 p-3 rounded-xl border transition-all ${
+                        index === 0
+                          ? "bg-amber-500/10 border-amber-500/30 dark:bg-amber-500/15"
+                          : "bg-white/60 dark:bg-white/5 border-black/5 dark:border-white/10"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`flex items-center justify-center w-7 h-7 rounded-lg text-xs font-black shrink-0 ${
+                            index === 0
+                              ? "bg-amber-500 text-white shadow-sm"
+                              : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300"
+                          }`}
+                        >
+                          #{index + 1}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-xs text-gray-900 dark:text-white">
+                              {task.nomor_tiket}
+                            </span>
+                            <Chip
+                              className="font-bold h-4 text-[9px] px-1"
+                              color={
+                                task.jenis_tugas === "JEMPUT"
+                                  ? "secondary"
+                                  : "primary"
+                              }
+                              size="sm"
+                              variant="flat"
+                            >
+                              {task.jenis_tugas}
+                            </Chip>
+                            {index === 0 && (
+                              <span className="text-[9px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                                Prioritas Pertama
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">
+                            {task.customers?.nama_terakhir || "Customer"}
+                            {task.customers?.nomor_hp
+                              ? ` (${task.customers.nomor_hp})`
+                              : ""}
+                          </p>
+                          <p className="text-[10px] text-gray-500 truncate max-w-xs md:max-w-md">
+                            {task.alamat_jalan || "Alamat belum diisi"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          isIconOnly
+                          className="h-8 w-8 min-w-8 rounded-lg"
+                          isDisabled={index === 0}
+                          size="sm"
+                          variant="flat"
+                          onPress={() => moveReorderTask(index, "up")}
+                        >
+                          <ArrowUp size={14} />
+                        </Button>
+                        <Button
+                          isIconOnly
+                          className="h-8 w-8 min-w-8 rounded-lg"
+                          isDisabled={index === reorderTasks.length - 1}
+                          size="sm"
+                          variant="flat"
+                          onPress={() => moveReorderTask(index, "down")}
+                        >
+                          <ArrowDown size={14} />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </ModalBody>
+          <ModalFooter className="pb-5 pt-3 px-6 border-t border-divider flex justify-between gap-2">
+            <Button
+              className="font-bold"
+              size="sm"
+              variant="light"
+              onPress={reorderModal.onClose}
+            >
+              Batal
+            </Button>
+            <Button
+              className="font-black px-6 h-9"
+              color="primary"
+              isDisabled={reorderTasks.length === 0}
+              isLoading={isSavingReorder}
+              size="sm"
+              onPress={handleSaveReorder}
+            >
+              Simpan Urutan
             </Button>
           </ModalFooter>
         </ModalContent>

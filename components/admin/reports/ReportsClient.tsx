@@ -817,7 +817,10 @@ export function ReportsClient({
                 SELISIH UPLOAD & KURIR SELESAI
               </TableColumn>
             </TableHeader>
-            <TableBody emptyContent="Tidak ada data." items={sortedSlaNotaJemput}>
+            <TableBody
+              emptyContent="Tidak ada data."
+              items={sortedSlaNotaJemput}
+            >
               {(item) => (
                 <TableRow key={item.nomor_tiket}>
                   <TableCell className="font-mono font-medium">
@@ -846,7 +849,9 @@ export function ReportsClient({
                   </TableCell>
                   <TableCell>
                     <Chip
-                      color={item.has_uploaded_nota === "Ya" ? "success" : "default"}
+                      color={
+                        item.has_uploaded_nota === "Ya" ? "success" : "default"
+                      }
                       size="sm"
                       variant="flat"
                     >

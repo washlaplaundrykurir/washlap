@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
         waktu_penjemputan,
         waktu_kurir_selesai,
         status_id,
+        urutan_kurir,
         catatan_khusus,
         courier_id,
         nomor_nota,
@@ -75,6 +76,13 @@ export async function GET(request: NextRequest) {
         { count: "exact" },
       )
       .not("courier_id", "is", null);
+
+    const courierId =
+      searchParams.get("courierId") || searchParams.get("courier_id");
+
+    if (courierId) {
+      query = query.eq("courier_id", courierId);
+    }
 
     if (type && ["JEMPUT", "ANTAR"].includes(type)) {
       query = query.eq("jenis_tugas", type);

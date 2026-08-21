@@ -342,10 +342,7 @@ export default function AdminPage() {
       return;
     }
 
-    if (
-      formData.nomorNota?.trim() &&
-      !isValidNomorNota(formData.nomorNota)
-    ) {
+    if (formData.nomorNota?.trim() && !isValidNomorNota(formData.nomorNota)) {
       setSubmitStatus({
         type: "error",
         message: NOTA_VALIDATION_MESSAGE,
@@ -1217,6 +1214,7 @@ export default function AdminPage() {
                   value={formData.nomorNota}
                   onBlur={() => {
                     const val = formData.nomorNota?.trim();
+
                     if (val && !isValidNomorNota(val)) {
                       showToast("error", NOTA_VALIDATION_MESSAGE);
                     }

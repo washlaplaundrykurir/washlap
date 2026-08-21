@@ -26,10 +26,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    if (
-      typeof nomor_nota === "string" &&
-      !isValidNomorNota(nomor_nota)
-    ) {
+    if (typeof nomor_nota === "string" && !isValidNomorNota(nomor_nota)) {
       return NextResponse.json(
         { error: NOTA_VALIDATION_MESSAGE },
         { status: 400 },

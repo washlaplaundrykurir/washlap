@@ -350,8 +350,8 @@ describe("AdminPage success state + submit flow", () => {
 
     expect(waButtons).toHaveLength(2);
 
-    const postCall = postOrderCalls()[0];
-    const postPayload = JSON.parse(String(postCall[1]?.body));
+    const postCall = postOrderCalls()[0] as any;
+    const postPayload = JSON.parse(String(postCall?.[1]?.body));
 
     expect(postPayload.permintaan).toEqual(["antar", "jemput"]);
 

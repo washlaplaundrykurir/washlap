@@ -172,6 +172,7 @@ const PendingCard = ({
                 variant="flat"
                 onBlur={() => {
                   const val = notaInputs[order.id]?.trim();
+
                   if (val && !isValidNomorNota(val)) {
                     showToast("error", NOTA_VALIDATION_MESSAGE);
                   }

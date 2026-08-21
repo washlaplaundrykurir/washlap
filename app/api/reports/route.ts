@@ -92,10 +92,10 @@ export async function GET(request: NextRequest) {
                 )
             `);
 
-    // Date Filter (WIB calendar day -> UTC instants for the timestamptz column)
-    // For "rekap" performa kurir: filter by `waktu_kurir_selesai` (when task diselesaikan kurir)
-    // For other report types: filter by `waktu_order`
-    const dateField = type === "rekap" ? "waktu_kurir_selesai" : "waktu_order";
+    // Date Filter (WIB calendar day -> UTC instants for the timestamptz column).
+    // All report tabs use the ticket/order date so their rows stay consistent
+    // for the same selected range. Rekap still requires courier completion below.
+    const dateField = "waktu_order";
 
     if (startDate && endDate) {
       const lower = wibDayStartUtc(startDate);
@@ -232,7 +232,7 @@ export async function GET(request: NextRequest) {
           }
         }
 
-                const courierName =
+        const courierName =
           (order as any).auth_users?.full_name ||
           (order as any).auth_users?.email ||
           (Array.isArray((order as any).auth_users) &&
@@ -316,9 +316,7 @@ export async function GET(request: NextRequest) {
       let countFailed = 0;
 
       const detailData = jemputOrders.map((order) => {
-        const hasNota = Boolean(
-          order.nomor_nota || order.nota_import?.matched,
-        );
+        const hasNota = Boolean(order.nomor_nota || order.nota_import?.matched);
         const tglInputNota =
           order.waktu_input_nota ||
           order.waktu_selesai ||

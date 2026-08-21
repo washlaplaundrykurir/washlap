@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
                 waktu_kurir_selesai,
                 sla_kurir_status,
                 status_id,
+                urutan_kurir,
                 catatan_khusus,
                 courier_id,
                 customers:customer_id (
@@ -78,9 +79,17 @@ export async function GET(request: NextRequest) {
       if (upper) query = query.lt("waktu_order", upper);
     }
 
-    const { data: orders, error } = await query.order("waktu_order", {
-      ascending: false,
-    });
+    if (status === "pending") {
+      query = query
+        .order("urutan_kurir", { ascending: true, nullsFirst: false })
+        .order("waktu_order", { ascending: true });
+    } else {
+      query = query.order("waktu_order", {
+        ascending: false,
+      });
+    }
+
+    const { data: orders, error } = await query;
 
     if (error) {
       console.error("Fetch kurir tasks error:", error);
@@ -105,12 +114,28 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    let finalOrders = enrichedOrders;
+
+    if (status === "pending") {
+      finalOrders = [...enrichedOrders].sort((a, b) => {
+        const orderA = a.urutan_kurir ?? Number.MAX_SAFE_INTEGER;
+        const orderB = b.urutan_kurir ?? Number.MAX_SAFE_INTEGER;
+
+        if (orderA !== orderB) return orderA - orderB;
+
+        const timeA = new Date(a.waktu_penjemputan || a.waktu_order).getTime();
+        const timeB = new Date(b.waktu_penjemputan || b.waktu_order).getTime();
+
+        return timeA - timeB;
+      });
+    }
+
     // Calculate stats — status 7 (Dibatalkan) dikecualikan dari semua hitungan
     const todayStart = new Date();
 
     todayStart.setHours(0, 0, 0, 0);
 
-    const activeOrders = enrichedOrders.filter((o) => o.status_id !== 7);
+    const activeOrders = finalOrders.filter((o) => o.status_id !== 7);
 
     const todayTasks = activeOrders.filter(
       (o) => new Date(o.waktu_order) >= todayStart,
@@ -127,7 +152,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: enrichedOrders,
+      data: finalOrders,
       courierName: userData?.full_name || "Kurir",
       stats: {
         todayTasks,

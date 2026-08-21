@@ -41,6 +41,7 @@ interface Order {
   google_maps_link: string;
   waktu_order: string;
   status_id: number;
+  urutan_kurir?: number | null;
   catatan_khusus: string;
   customers: {
     id: string;
@@ -243,13 +244,31 @@ export default function KurirTasksPage() {
           {filteredOrders.map((order) => (
             <Card
               key={order.id}
-              className="backdrop-blur-xl bg-white/60 dark:bg-white/15 border border-black/10 dark:border-white/30"
+              className={`backdrop-blur-xl bg-white/60 dark:bg-white/15 border ${
+                order.urutan_kurir === 1
+                  ? "border-amber-400/80 dark:border-amber-400/80 shadow-amber-500/10 shadow-lg ring-2 ring-amber-400/20"
+                  : "border-black/10 dark:border-white/30"
+              }`}
             >
               <CardBody className="p-4">
                 <div className="flex flex-col gap-3">
                   {/* Header */}
                   <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {order.urutan_kurir ? (
+                        <Chip
+                          className="font-black text-[11px]"
+                          color={
+                            order.urutan_kurir === 1 ? "warning" : "default"
+                          }
+                          size="sm"
+                          variant={order.urutan_kurir === 1 ? "solid" : "flat"}
+                        >
+                          {order.urutan_kurir === 1
+                            ? `⚡ #${order.urutan_kurir} Antar Duluan`
+                            : `#${order.urutan_kurir}`}
+                        </Chip>
+                      ) : null}
                       <span className="font-bold text-gray-900 dark:text-white">
                         {order.nomor_tiket}
                       </span>
