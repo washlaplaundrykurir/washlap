@@ -195,8 +195,10 @@ export async function PUT(request: NextRequest) {
     }
     if (typeof nomorNota === "string" && nomorNota.trim() !== "") {
       updatePermintaanData.nomor_nota = nomorNota.trim();
+      updatePermintaanData.waktu_input_nota = new Date().toISOString();
     } else if (nomorNota === null || nomorNota === "") {
       updatePermintaanData.nomor_nota = null;
+      updatePermintaanData.waktu_input_nota = null;
     }
 
     // Process waktu_penjemputan mapped from frontend key

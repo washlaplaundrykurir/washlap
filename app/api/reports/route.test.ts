@@ -17,7 +17,7 @@ const h = vi.hoisted(() => {
     waktu_assigned: null,
     waktu_kurir_selesai: "2026-05-25T13:00:00.000Z",
     waktu_selesai: "2026-06-01T01:00:00.000Z",
-    waktu_input_nota: null,
+    waktu_input_nota: "2026-05-25T13:51:00.000Z",
     status_id: 6,
     sla_tiket_menit: null,
     sla_tiket_status: null,
@@ -48,6 +48,7 @@ const h = vi.hoisted(() => {
       nomor_tiket: "J NEG 0003",
       nomor_nota: "NEG260525200000001",
       waktu_kurir_selesai: "2026-05-25T13:00:00.000Z",
+      waktu_input_nota: "2026-05-25T12:00:00.000Z",
       waktu_selesai: null,
     },
   ];
@@ -198,8 +199,9 @@ describe("GET /api/reports", () => {
     expect(json.summary).toMatchObject({
       totalJemput: 2,
       countNoNota: 0,
-      countMeet: 0,
-      countFailed: 2,
+      countMeet: 1,
+      countFailed: 1,
+      meetPct: "50%",
     });
     expect(json.data).toHaveLength(2);
     expect(json.data[0].nomor_tiket).toBe("A KIK 1234");

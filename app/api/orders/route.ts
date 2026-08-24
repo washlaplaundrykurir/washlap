@@ -293,6 +293,12 @@ export async function POST(request: NextRequest) {
     // Insert one row per jenis_tugas type
     for (const type of jenisTugasArray) {
       const nomorTiket = generateTicket(type, cleanNama);
+      const isPairedJemput =
+        type.toUpperCase() === "JEMPUT" &&
+        jenisTugasArray.some((t) => t.toUpperCase() === "ANTAR");
+      const ticketNota =
+        isPairedJemput || trimmedNota === "" ? null : trimmedNota;
+      const ticketWaktuInputNota = ticketNota ? now.toISOString() : null;
 
       const { data: permintaanData, error: permintaanError } = await supabase
         .from("permintaan")
@@ -301,7 +307,8 @@ export async function POST(request: NextRequest) {
           status_id: 1, // "Baru"
           nomor_tiket: nomorTiket,
           jenis_tugas: type, // Now a single ENUM value, not an array
-          nomor_nota: trimmedNota !== "" ? trimmedNota : null,
+          nomor_nota: ticketNota,
+          waktu_input_nota: ticketWaktuInputNota,
           alamat_jalan: finalAlamat || alamat,
           google_maps_link: finalGoogleMapsLink || googleMapsLink,
           waktu_order: now.toISOString(),
@@ -369,7 +376,7 @@ export async function POST(request: NextRequest) {
       // Look up OTHER permintaan rows (any status_id, Req 2.1) for the same
       // activity type whose trimmed+case-insensitive nomor_nota matches. If the
       // query errors, log and omit the warning rather than failing the save.
-      if (shouldCheckNota(trimmedNota)) {
+      if (ticketNota && shouldCheckNota(ticketNota)) {
         try {
           // Narrow candidates with a case-insensitive substring filter. Since
           // a real match (per `notaMatches`) requires the stored value to equal
@@ -378,7 +385,7 @@ export async function POST(request: NextRequest) {
           // never drops a real match. `notaMatches` below is the authoritative
           // trim + case-insensitive comparison. LIKE specials are escaped so
           // they are treated literally.
-          const likeNeedle = trimmedNota.replace(/[\\%_]/g, (c) => `\\${c}`);
+          const likeNeedle = ticketNota.replace(/[\\%_]/g, (c) => `\\${c}`);
 
           const { data: notaRows, error: notaErr } = await supabase
             .from("permintaan")
@@ -395,7 +402,7 @@ export async function POST(request: NextRequest) {
               .filter((r) => r.id !== permintaanData.id)
               .some((r) =>
                 notaMatches(
-                  { nota: trimmedNota, jenis: type as JenisTugas },
+                  { nota: ticketNota, jenis: type as JenisTugas },
                   {
                     nota: r.nomor_nota ?? "",
                     jenis: r.jenis_tugas as JenisTugas,
@@ -407,7 +414,7 @@ export async function POST(request: NextRequest) {
               warnings.push({
                 type: "duplicate_nota",
                 jenis_tugas: type,
-                nomor_nota: trimmedNota,
+                nomor_nota: ticketNota,
               });
             }
           }

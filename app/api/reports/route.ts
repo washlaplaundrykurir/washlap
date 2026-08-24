@@ -248,7 +248,6 @@ export async function GET(request: NextRequest) {
           tanggal_assign: order.waktu_assigned || "-",
           tanggal_diselesaikan_kurir: order.waktu_kurir_selesai || "-",
           tanggal_input_nota:
-            order.nota_import?.tanggal_terima ||
             order.waktu_input_nota ||
             order.waktu_selesai ||
             "-",
@@ -316,11 +315,10 @@ export async function GET(request: NextRequest) {
       let countFailed = 0;
 
       const detailData = jemputOrders.map((order) => {
-        const hasNota = Boolean(order.nomor_nota || order.nota_import?.matched);
+        const hasNota = Boolean(order.nomor_nota);
         const tglInputNota =
           order.waktu_input_nota ||
           order.waktu_selesai ||
-          order.nota_import?.tanggal_terima ||
           null;
 
         let selisihInputMenit: number | null = null;
@@ -358,7 +356,12 @@ export async function GET(request: NextRequest) {
           countFailed++;
         }
 
-        const tglUploadNota = order.nota_import?.tanggal_terima || null;
+        const isNotaMatched = Boolean(
+          order.nomor_nota && order.nota_import?.matched,
+        );
+        const tglUploadNota = isNotaMatched
+          ? order.nota_import?.tanggal_terima || null
+          : null;
         let selisihUploadMenit: number | null = null;
 
         if (order.waktu_kurir_selesai && tglUploadNota) {
@@ -382,21 +385,21 @@ export async function GET(request: NextRequest) {
           nama_kurir: courierName,
           nama_cust:
             (order as any).customers?.nama_terakhir ||
-            order.nota_import?.nama_pelanggan ||
+            (isNotaMatched ? order.nota_import?.nama_pelanggan : null) ||
             "-",
           nomor_hp:
             (order as any).customers?.nomor_hp ||
-            order.nota_import?.nomor_hp ||
+            (isNotaMatched ? order.nota_import?.nomor_hp : null) ||
             "-",
           tanggal_tiket: order.waktu_order,
           week: getWeekNumber(order.waktu_order),
           waktu_kurir_selesai: order.waktu_kurir_selesai || "-",
-          nomor_nota: order.nomor_nota || order.nota_import?.nomor_nota || "-",
+          nomor_nota: order.nomor_nota || "-",
           tanggal_input_nota: tglInputNota || "-",
           selisih_input_menit: selisihInputMenit,
           selisih_input_durasi: formatDuration(selisihInputMenit),
           sla_input_status: slaInputStatus,
-          has_uploaded_nota: order.nota_import?.matched ? "Ya" : "Tidak",
+          has_uploaded_nota: isNotaMatched ? "Ya" : "Tidak",
           tanggal_nota_upload: tglUploadNota || "-",
           selisih_upload_menit: selisihUploadMenit,
           selisih_upload_durasi: formatDuration(selisihUploadMenit),

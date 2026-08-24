@@ -495,4 +495,39 @@ describe("POST /api/orders — nota warning & response shape (task 6.3)", () => 
     // nomor_hp is the normalized 62xxx form of the submitted phone (Req 1.2/1.5).
     expect(order.nomor_hp).toBe("628123456789");
   });
+
+  it("assigns nomor_nota and waktu_input_nota only to ANTAR when ANTAR+JEMPUT are created together", async () => {
+    h.controller.gateCustomer = null;
+    h.controller.notaRows = [];
+
+    const { status, json } = await callPost(
+      makeBody({
+        permintaan: ["antar", "jemput"],
+        nomorNota: "INV-PAIRED-123",
+      }),
+    );
+
+    expect(status).toBe(200);
+    expect(json.orders).toHaveLength(2);
+    expect(h.controller.calls.permintaanInsert).toHaveLength(2);
+
+    const antarInsert = h.controller.calls.permintaanInsert.find(
+      (p: any) => p.jenis_tugas === "ANTAR",
+    );
+    const jemputInsert = h.controller.calls.permintaanInsert.find(
+      (p: any) => p.jenis_tugas === "JEMPUT",
+    );
+
+    expect(antarInsert).toMatchObject({
+      jenis_tugas: "ANTAR",
+      nomor_nota: "INV-PAIRED-123",
+    });
+    expect(antarInsert.waktu_input_nota).toBeTruthy();
+
+    expect(jemputInsert).toMatchObject({
+      jenis_tugas: "JEMPUT",
+      nomor_nota: null,
+      waktu_input_nota: null,
+    });
+  });
 });

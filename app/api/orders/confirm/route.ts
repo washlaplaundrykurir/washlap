@@ -48,6 +48,7 @@ export async function PUT(request: NextRequest) {
 
     if (nomor_nota) {
       updateData.nomor_nota = nomor_nota.trim();
+      updateData.waktu_input_nota = waktuSelesai;
     }
 
     if (order?.waktu_kurir_selesai) {
